@@ -1,0 +1,226 @@
+#tetrisCanvas {
+    background: #111;
+    display: block;
+    margin: 24px auto 0 auto;
+    border: 4px solid #fff;
+    box-sizing: border-box;
+    border-radius: 8px;
+}
+
+#tetrisContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100%;
+}
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva 'Arial', sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.game-selection {
+    display: flex;
+    gap: 1rem;
+}
+
+.game-template-btn {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    background-color: #ccc;
+    transition: all 0.3s;
+}
+
+.game-template-btn.active {
+    background-color: #007bff;
+    color: white;
+    transform: scale(1.1);
+}
+
+.game-container {
+    transition: opacity 0.3s;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.game-selection {
+    display: flex;
+    gap: 1rem;
+}
+
+.game-template-btn {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 10px;
+    background-color: #ccc;
+    transition: all 0.3s;
+}
+
+.game-template-btn.active {
+    background-color: #007bff;
+    color: white;
+    transform: scale(1.1);
+}
+
+.game-container {
+    transition: opacity 0.3s;
+}
+
+.container {
+    text-align: center;
+    background-color: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 1.5rem;
+}
+
+.controls {
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    align-items: center;
+}
+
+.mode-selection, .difficulty-selection {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+select, button {
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#status {
+    margin-bottom: 1rem;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    background-color: #0056b3;
+    padding: 10px;
+    border-radius: 10px;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+.cell {
+    width: 50px;
+    height: 50px;
+    background-color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.cell .piece {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.piece.red {
+    background-color: #e74c3c;
+}
+
+.piece.yellow {
+    background-color: #f1c40f;
+}
+
+.cell:hover {
+    background-color: #eee;
+}
+
+.ms-board {
+    display: grid;
+    gap: 2px;
+    background-color: #bbb;
+    padding: 5px;
+    border: 5px solid #888;
+    margin: 0 auto;
+    width: fit-content;
+}
+
+.ms-cell {
+    width: 30px;
+    height: 30px;
+    background-color: #ddd;
+    border: 1px solid #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.ms-cell.revealed {
+    background-color: #eee;
+    border: 1px solid #ccc;
+}
+
+.ms-cell.mine {
+    background-color: #e74c3c;
+}
+
+.ms-cell.flagged::after {
+    content: '🚩';
+    font-size: 14px;
+}
+
+.ms-cell.number-1 { color: blue; }
+.ms-cell.number-2 { color: green; }
+.ms-cell.number-3 { color: red; }
+.ms-cell.number-4 { color: darkblue; }
+.ms-cell.number-5 { color: darkred; }
+.ms-cell.number-6 { color: teal; }
