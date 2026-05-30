@@ -38,9 +38,17 @@ const tetrisContainer = document.getElementById('tetrisContainer');
 const resetTetrisBtn = document.getElementById('resetTetrisBtn');
 const tetrisCanvas = document.getElementById('tetrisCanvas');
 const tetrisStatusElement = document.getElementById('tetrisStatus');
+const nextPieceCanvas = document.getElementById('nextPieceCanvas');
 const ctx = tetrisCanvas.getContext('2d');
+const nextCtx = nextPieceCanvas.getContext('2d');
 let tetrisInterval;
 let tetrisScore = 0;
+
+// Tetris mobile control elements
+const tetrisBtnLeft = document.getElementById('tetrisBtnLeft');
+const tetrisBtnRight = document.getElementById('tetrisBtnRight');
+const tetrisBtnDown = document.getElementById('tetrisBtnDown');
+const tetrisBtnRotate = document.getElementById('tetrisBtnRotate');
 
 // Tetris event listeners
 resetTetrisBtn.addEventListener('click', initTetris);
@@ -64,6 +72,7 @@ let tetrisBoard = [];
 let currentPiece = null;
 let currentPiecePos = { x: 0, y: 0 };
 let currentPieceColor = '';
+let nextPieceIndex = -1;
 
 // Game switching logic
 btnFourWins.addEventListener('click', () => {
@@ -497,6 +506,7 @@ function initTetris() {
     clearInterval(tetrisInterval);
     tetrisBoard = Array.from({ length: TETRIS_ROWS }, () => Array(TETRIS_COLS).fill(null));
     tetrisScore = 0;
+    nextPieceIndex = -1;
     tetrisStatusElement.textContent = `Punkte: ${tetrisScore}`;
     
     spawnPiece();
@@ -507,16 +517,19 @@ function initTetris() {
         }
         drawTetris();
     }, 500);
-
-    // Tetris event listeners
-    resetTetrisBtn.addEventListener('click', initTetris);
 }
 
 function spawnPiece() {
-    const index = Math.floor(Math.random() * PIECES_DATA.length);
+    if (nextPieceIndex === -1) {
+        nextPieceIndex = Math.floor(Math.random() * PIECES_DATA.length);
+    }
+    const index = nextPieceIndex;
+    nextPieceIndex = Math.floor(Math.random() * PIECES_DATA.length);
     currentPiece = PIECES_DATA[index].shape;
     currentPieceColor = PIECES_DATA[index].color;
     currentPiecePos = { x: Math.floor(TETRIS_COLS / 2) - 1, y: 0 };
+
+    drawNextPiece();
 
     if (checkCollision(currentPiece, currentPiecePos.x, currentPiecePos.y)) {
         // Game Over
@@ -607,6 +620,57 @@ function handleTetrisKey(e) {
         drawTetris();
     }
 }
+
+function drawNextPiece() {
+    const canvasW = nextPieceCanvas.width;
+    const canvasH = nextPieceCanvas.height;
+    nextCtx.clearRect(0, 0, canvasW, canvasH);
+
+    if (nextPieceIndex === -1) return;
+
+    const piece = PIECES_DATA[nextPieceIndex].shape;
+    const color = PIECES_DATA[nextPieceIndex].color;
+    const previewBlockSize = 20;
+
+    // Center the piece in the preview canvas
+    const pieceW = piece[0].length * previewBlockSize;
+    const pieceH = piece.length * previewBlockSize;
+    const offsetX = (canvasW - pieceW) / 2;
+    const offsetY = (canvasH - pieceH) / 2;
+
+    nextCtx.fillStyle = color;
+    for (let r = 0; r < piece.length; r++) {
+        for (let c = 0; c < piece[r].length; c++) {
+            if (piece[r][c]) {
+                nextCtx.fillRect(offsetX + c * previewBlockSize, offsetY + r * previewBlockSize, previewBlockSize, previewBlockSize);
+            }
+        }
+    }
+}
+
+// Mobile controls for Tetris
+function setupMobileControls() {
+    // Use touchstart for faster response on mobile
+    const addControl = (btn, action) => {
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            action();
+            drawTetris();
+        });
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            action();
+            drawTetris();
+        });
+    };
+
+    addControl(tetrisBtnLeft, () => movePiece(-1, 0));
+    addControl(tetrisBtnRight, () => movePiece(1, 0));
+    addControl(tetrisBtnDown, () => movePiece(0, 1));
+    addControl(tetrisBtnRotate, () => rotatePiece());
+}
+
+setupMobileControls();
 
 // Start the game
 initGame();
