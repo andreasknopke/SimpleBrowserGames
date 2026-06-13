@@ -12,6 +12,8 @@
             <button id="btnFourWins" class="game-template-btn active">Vier Gewinnt</button>
             <button id="btnMinesweeper" class="game-template-btn">Minesweeper</button>
             <button id="btnTetris" class="game-template-btn">Tetris</button>
+            <button id="btnSnake" class="game-template-btn">Snake</button>
+            <button id="btnPong" class="game-template-btn">Pong</button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -93,6 +95,58 @@
                         <button id="tetrisBtnLeft" class="tetris-ctrl-btn">◀ Links</button>
                         <button id="tetrisBtnDown" class="tetris-ctrl-btn">▼ Runter</button>
                         <button id="tetrisBtnRight" class="tetris-ctrl-btn">▶ Rechts</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="snakeContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Snake</h1>
+                <div class="controls">
+                    <button id="resetSnakeBtn">Neues Spiel</button>
+                </div>
+                <div id="snakeStatus">Punkte: 0</div>
+                <div class="snake-game-area">
+                    <canvas id="snakeCanvas" width="400" height="400"></canvas>
+                </div>
+                <div class="snake-mobile-controls">
+                    <div class="snake-controls-row">
+                        <button id="snakeBtnUp" class="snake-ctrl-btn">▲</button>
+                    </div>
+                    <div class="snake-controls-row">
+                        <button id="snakeBtnLeft" class="snake-ctrl-btn">◀</button>
+                        <button id="snakeBtnDown" class="snake-ctrl-btn">▼</button>
+                        <button id="snakeBtnRight" class="snake-ctrl-btn">▶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="pongContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Pong</h1>
+                <div class="controls">
+                    <div class="mode-selection">
+                        <label for="pongMode">Modus:</label>
+                        <select id="pongMode">
+                            <option value="2p">2 Spieler</option>
+                            <option value="1p">1 Spieler (vs Computer)</option>
+                        </select>
+                    </div>
+                    <button id="resetPongBtn">Neues Spiel</button>
+                </div>
+                <div id="pongStatus">Player 1: 0 | Player 2: 0</div>
+                <div class="pong-game-area">
+                    <canvas id="pongCanvas" width="600" height="400"></canvas>
+                </div>
+                <div class="pong-mobile-controls">
+                    <div class="pong-controls-row">
+                        <button id="pongBtnLeftUp" class="pong-ctrl-btn">P1 ▲</button>
+                        <button id="pongBtnLeftDown" class="pong-ctrl-btn">P1 ▼</button>
+                        <span class="pong-label">|</span>
+                        <button id="pongBtnRightUp" class="pong-ctrl-btn">P2 ▲</button>
+                        <button id="pongBtnRightDown" class="pong-ctrl-btn">P2 ▼</button>
                     </div>
                 </div>
             </div>

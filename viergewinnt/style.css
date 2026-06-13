@@ -293,3 +293,126 @@ button:hover {
 .ms-cell.number-4 { color: darkblue; }
 .ms-cell.number-5 { color: darkred; }
 .ms-cell.number-6 { color: teal; }
+
+/* ========== Snake ========== */
+
+#snakeCanvas {
+    background: #111;
+    display: block;
+    border: 4px solid #fff;
+    border-radius: 8px;
+    margin: 0 auto;
+}
+
+.snake-game-area {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+#snakeContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100%;
+}
+
+.snake-mobile-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.snake-controls-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.snake-ctrl-btn {
+    padding: 16px 24px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 12px;
+    background-color: #444;
+    color: white;
+    transition: background-color 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-width: 80px;
+}
+
+.snake-ctrl-btn:active {
+    background-color: #28a745;
+    transform: scale(0.95);
+}
+
+/* ========== Pong ========== */
+
+#pongCanvas {
+    background: #111;
+    display: block;
+    border: 4px solid #fff;
+    border-radius: 8px;
+    margin: 0 auto;
+}
+
+.pong-game-area {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+#pongContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100%;
+}
+
+.pong-mobile-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.pong-controls-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.pong-ctrl-btn {
+    padding: 16px 24px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 12px;
+    background-color: #444;
+    color: white;
+    transition: background-color 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-width: 80px;
+}
+
+.pong-ctrl-btn:active {
+    background-color: #fd7e14;
+    transform: scale(0.95);
+}
+
+.pong-label {
+    color: #333;
+    font-size: 1.5rem;
+    font-weight: bold;
+}

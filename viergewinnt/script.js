@@ -52,7 +52,6 @@ const tetrisBtnRotate = document.getElementById('tetrisBtnRotate');
 
 // Tetris event listeners
 resetTetrisBtn.addEventListener('click', initTetris);
-document.addEventListener('keydown', handleTetrisKey);
 
 // Tetris Constants & State
 const TETRIS_ROWS = 20;
@@ -74,6 +73,35 @@ let currentPiecePos = { x: 0, y: 0 };
 let currentPieceColor = '';
 let nextPieceIndex = -1;
 
+// Snake elements
+const btnSnake = document.getElementById('btnSnake');
+const snakeContainer = document.getElementById('snakeContainer');
+const resetSnakeBtn = document.getElementById('resetSnakeBtn');
+const snakeCanvas = document.getElementById('snakeCanvas');
+const snakeStatusElement = document.getElementById('snakeStatus');
+const snakeCtx = snakeCanvas.getContext('2d');
+const snakeBtnUp = document.getElementById('snakeBtnUp');
+const snakeBtnLeft = document.getElementById('snakeBtnLeft');
+const snakeBtnDown = document.getElementById('snakeBtnDown');
+const snakeBtnRight = document.getElementById('snakeBtnRight');
+
+// Pong elements
+const btnPong = document.getElementById('btnPong');
+const pongContainer = document.getElementById('pongContainer');
+const resetPongBtn = document.getElementById('resetPongBtn');
+const pongCanvas = document.getElementById('pongCanvas');
+const pongStatusElement = document.getElementById('pongStatus');
+const pongCtx = pongCanvas.getContext('2d');
+const pongModeSelect = document.getElementById('pongMode');
+const pongBtnLeftUp = document.getElementById('pongBtnLeftUp');
+const pongBtnLeftDown = document.getElementById('pongBtnLeftDown');
+const pongBtnRightUp = document.getElementById('pongBtnRightUp');
+const pongBtnRightDown = document.getElementById('pongBtnRightDown');
+
+// Snake & Pong state
+let snakeInterval;
+let pongInterval;
+
 // Game switching logic
 btnFourWins.addEventListener('click', () => {
     switchGame('fourWins');
@@ -87,34 +115,54 @@ btnTetris.addEventListener('click', () => {
     switchGame('tetris');
 });
 
+btnSnake.addEventListener('click', () => {
+    switchGame('snake');
+});
+
+btnPong.addEventListener('click', () => {
+    switchGame('pong');
+});
+
 function switchGame(game) {
     // Clear all intervals to prevent multiple games running
     clearInterval(tetrisInterval);
+    clearInterval(snakeInterval);
+    clearInterval(pongInterval);
+
+    // Hide all containers
+    fourWinsContainer.style.display = 'none';
+    minesweeperContainer.style.display = 'none';
+    tetrisContainer.style.display = 'none';
+    snakeContainer.style.display = 'none';
+    pongContainer.style.display = 'none';
+
+    // Remove active class from all buttons
+    btnFourWins.classList.remove('active');
+    btnMinesweeper.classList.remove('active');
+    btnTetris.classList.remove('active');
+    btnSnake.classList.remove('active');
+    btnPong.classList.remove('active');
 
     if (game === 'fourWins') {
         btnFourWins.classList.add('active');
-        btnMinesweeper.classList.remove('active');
-        btnTetris.classList.remove('active');
         fourWinsContainer.style.display = 'block';
-        minesweeperContainer.style.display = 'none';
-        tetrisContainer.style.display = 'none';
         initGame();
     } else if (game === 'minesweeper') {
         btnMinesweeper.classList.add('active');
-        btnFourWins.classList.remove('active');
-        btnTetris.classList.remove('active');
-        fourWinsContainer.style.display = 'none';
         minesweeperContainer.style.display = 'block';
-        tetrisContainer.style.display = 'none';
         initMinesweeper();
     } else if (game === 'tetris') {
         btnTetris.classList.add('active');
-        btnFourWins.classList.remove('active');
-        btnMinesweeper.classList.remove('active');
-        fourWinsContainer.style.display = 'none';
-        minesweeperContainer.style.display = 'none';
         tetrisContainer.style.display = 'block';
         initTetris();
+    } else if (game === 'snake') {
+        btnSnake.classList.add('active');
+        snakeContainer.style.display = 'block';
+        initSnake();
+    } else if (game === 'pong') {
+        btnPong.classList.add('active');
+        pongContainer.style.display = 'block';
+        initPong();
     }
 }
 
@@ -671,6 +719,346 @@ function setupMobileControls() {
 }
 
 setupMobileControls();
+
+// =============================================
+// Snake Game
+// =============================================
+
+const SNAKE_SIZE = 20;
+const SNAKE_COLS = 20;
+const SNAKE_ROWS = 20;
+const SNAKE_CANVAS_SIZE = 400;
+
+let snake = [];
+let snakeDir = { x: 1, y: 0 };
+let snakeNextDir = { x: 1, y: 0 };
+let snakeFood = { x: 5, y: 5 };
+let snakeScore = 0;
+let snakeGameOver = false;
+
+function initSnake() {
+    clearInterval(snakeInterval);
+    snake = [{ x: 5, y: 10 }, { x: 4, y: 10 }, { x: 3, y: 10 }];
+    snakeDir = { x: 1, y: 0 };
+    snakeNextDir = { x: 1, y: 0 };
+    snakeScore = 0;
+    snakeGameOver = false;
+    snakeStatusElement.textContent = `Punkte: ${snakeScore}`;
+    placeFood();
+    drawSnake();
+
+    snakeInterval = setInterval(() => {
+        snakeDir = { ...snakeNextDir };
+        moveSnake();
+        drawSnake();
+    }, 150);
+}
+
+function placeFood() {
+    let free = false;
+    while (!free) {
+        const fx = Math.floor(Math.random() * SNAKE_COLS);
+        const fy = Math.floor(Math.random() * SNAKE_ROWS);
+        free = true;
+        for (const seg of snake) {
+            if (seg.x === fx && seg.y === fy) { free = false; break; }
+        }
+        if (free) {
+            snakeFood = { x: fx, y: fy };
+        }
+    }
+}
+
+function moveSnake() {
+    if (snakeGameOver) return;
+
+    const head = { x: snake[0].x + snakeDir.x, y: snake[0].y + snakeDir.y };
+
+    // Wall collision
+    if (head.x < 0 || head.x >= SNAKE_COLS || head.y < 0 || head.y >= SNAKE_ROWS) {
+        endSnake();
+        return;
+    }
+
+    // Self collision
+    for (let i = 0; i < snake.length; i++) {
+        if (snake[i].x === head.x && snake[i].y === head.y) {
+            endSnake();
+            return;
+        }
+    }
+
+    snake.unshift(head);
+
+    // Check food
+    if (head.x === snakeFood.x && head.y === snakeFood.y) {
+        snakeScore += 10;
+        snakeStatusElement.textContent = `Punkte: ${snakeScore}`;
+        placeFood();
+    } else {
+        snake.pop();
+    }
+}
+
+function endSnake() {
+    snakeGameOver = true;
+    clearInterval(snakeInterval);
+    snakeStatusElement.textContent = `Game Over! Punkte: ${snakeScore}`;
+}
+
+function drawSnake() {
+    snakeCtx.clearRect(0, 0, SNAKE_CANVAS_SIZE, SNAKE_CANVAS_SIZE);
+
+    // Draw food
+    snakeCtx.fillStyle = '#ff0000';
+    snakeCtx.fillRect(snakeFood.x * SNAKE_SIZE, snakeFood.y * SNAKE_SIZE, SNAKE_SIZE, SNAKE_SIZE);
+
+    // Draw snake
+    for (let i = 0; i < snake.length; i++) {
+        const g = 255 - Math.floor((i / snake.length) * 200);
+        snakeCtx.fillStyle = `rgb(0, ${g}, 0)`;
+        snakeCtx.fillRect(snake[i].x * SNAKE_SIZE, snake[i].y * SNAKE_SIZE, SNAKE_SIZE - 1, SNAKE_SIZE - 1);
+    }
+}
+
+function handleSnakeKey(e) {
+    if (snakeGameOver) return;
+    switch (e.key) {
+        case 'ArrowUp':
+            if (snakeDir.y !== 1) snakeNextDir = { x: 0, y: -1 };
+            break;
+        case 'ArrowDown':
+            if (snakeDir.y !== -1) snakeNextDir = { x: 0, y: 1 };
+            break;
+        case 'ArrowLeft':
+            if (snakeDir.x !== 1) snakeNextDir = { x: -1, y: 0 };
+            break;
+        case 'ArrowRight':
+            if (snakeDir.x !== -1) snakeNextDir = { x: 1, y: 0 };
+            break;
+    }
+    e.preventDefault();
+}
+
+resetSnakeBtn.addEventListener('click', initSnake);
+
+// Snake mobile controls
+function setupSnakeControls() {
+    const addSnakeControl = (btn, dx, dy) => {
+        const handler = () => {
+            if (snakeGameOver) return;
+            if (dx === 0 && dy === -1 && snakeDir.y !== 1) snakeNextDir = { x: 0, y: -1 };
+            else if (dx === 0 && dy === 1 && snakeDir.y !== -1) snakeNextDir = { x: 0, y: 1 };
+            else if (dx === -1 && dy === 0 && snakeDir.x !== 1) snakeNextDir = { x: -1, y: 0 };
+            else if (dx === 1 && dy === 0 && snakeDir.x !== -1) snakeNextDir = { x: 1, y: 0 };
+        };
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); });
+        btn.addEventListener('click', (e) => { e.preventDefault(); handler(); });
+    };
+    addSnakeControl(snakeBtnUp, 0, -1);
+    addSnakeControl(snakeBtnDown, 0, 1);
+    addSnakeControl(snakeBtnLeft, -1, 0);
+    addSnakeControl(snakeBtnRight, 1, 0);
+}
+setupSnakeControls();
+
+// =============================================
+// Pong Game
+// =============================================
+
+const PONG_WIDTH = 600;
+const PONG_HEIGHT = 400;
+const PADDLE_WIDTH = 10;
+const PADDLE_HEIGHT = 60;
+const BALL_SIZE = 8;
+const PADDLE_SPEED = 5;
+const AI_SPEED = 4;
+
+let pongMode = '2p';
+let pongLeftY = 160;
+let pongRightY = 160;
+let pongBallX = 300;
+let pongBallY = 200;
+let pongBallDX = 4;
+let pongBallDY = 4;
+let pongLeftScore = 0;
+let pongRightScore = 0;
+let pongGameOver = false;
+let pongLeftMoving = 0;
+let pongRightMoving = 0;
+
+function initPong() {
+    clearInterval(pongInterval);
+    pongMode = pongModeSelect.value;
+    pongLeftY = 160;
+    pongRightY = 160;
+    pongBallX = 300;
+    pongBallY = 200;
+    pongBallDX = 4 * (Math.random() > 0.5 ? 1 : -1);
+    pongBallDY = 4 * (Math.random() > 0.5 ? 1 : -1);
+    pongLeftScore = 0;
+    pongRightScore = 0;
+    pongGameOver = false;
+    pongLeftMoving = 0;
+    pongRightMoving = 0;
+    pongStatusElement.textContent = `Player 1: 0 | Player 2: 0`;
+    drawPong();
+
+    pongInterval = setInterval(() => {
+        updatePong();
+        drawPong();
+    }, 20);
+}
+
+function updatePong() {
+    if (pongGameOver) return;
+
+    // Move paddles
+    pongLeftY += pongLeftMoving * PADDLE_SPEED;
+    if (pongMode === '1p') {
+        // Simple AI: follow the ball
+        const target = pongBallY - PADDLE_HEIGHT / 2;
+        const diff = target - pongRightY;
+        if (Math.abs(diff) > AI_SPEED) {
+            pongRightY += Math.sign(diff) * AI_SPEED;
+        }
+    } else {
+        pongRightY += pongRightMoving * PADDLE_SPEED;
+    }
+
+    // Clamp paddles
+    pongLeftY = Math.max(0, Math.min(PONG_HEIGHT - PADDLE_HEIGHT, pongLeftY));
+    pongRightY = Math.max(0, Math.min(PONG_HEIGHT - PADDLE_HEIGHT, pongRightY));
+
+    // Move ball
+    pongBallX += pongBallDX;
+    pongBallY += pongBallDY;
+
+    // Top / bottom wall
+    if (pongBallY <= 0 || pongBallY >= PONG_HEIGHT - BALL_SIZE) {
+        pongBallDY = -pongBallDY;
+    }
+
+    // Left paddle
+    if (pongBallX <= 10 + BALL_SIZE && pongBallX >= 10 &&
+        pongBallY + BALL_SIZE >= pongLeftY && pongBallY <= pongLeftY + PADDLE_HEIGHT) {
+        pongBallDX = -pongBallDX;
+        pongBallX = 10 + BALL_SIZE + 1;
+    }
+
+    // Right paddle
+    if (pongBallX >= PONG_WIDTH - 10 - BALL_SIZE && pongBallX <= PONG_WIDTH - 10 &&
+        pongBallY + BALL_SIZE >= pongRightY && pongBallY <= pongRightY + PADDLE_HEIGHT) {
+        pongBallDX = -pongBallDX;
+        pongBallX = PONG_WIDTH - 10 - BALL_SIZE - 1;
+    }
+
+    // Scoring
+    if (pongBallX < 0) {
+        pongRightScore++;
+        resetPongBall();
+    }
+    if (pongBallX > PONG_WIDTH) {
+        pongLeftScore++;
+        resetPongBall();
+    }
+
+    pongStatusElement.textContent = `Player 1: ${pongLeftScore} | Player 2: ${pongRightScore}`;
+
+    // Win at 10
+    if (pongLeftScore >= 10 || pongRightScore >= 10) {
+        pongGameOver = true;
+        clearInterval(pongInterval);
+        const winner = pongLeftScore >= 10 ? 'Player 1' : 'Player 2';
+        pongStatusElement.textContent = `${winner} hat gewonnen! (${pongLeftScore}:${pongRightScore})`;
+    }
+}
+
+function resetPongBall() {
+    pongBallX = PONG_WIDTH / 2;
+    pongBallY = PONG_HEIGHT / 2;
+    pongBallDX = 4 * (Math.random() > 0.5 ? 1 : -1);
+    pongBallDY = 4 * (Math.random() > 0.5 ? 1 : -1);
+}
+
+function drawPong() {
+    pongCtx.clearRect(0, 0, PONG_WIDTH, PONG_HEIGHT);
+
+    // Center line
+    pongCtx.strokeStyle = '#fff';
+    pongCtx.setLineDash([10, 10]);
+    pongCtx.beginPath();
+    pongCtx.moveTo(PONG_WIDTH / 2, 0);
+    pongCtx.lineTo(PONG_WIDTH / 2, PONG_HEIGHT);
+    pongCtx.stroke();
+    pongCtx.setLineDash([]);
+
+    // Left paddle
+    pongCtx.fillStyle = '#fff';
+    pongCtx.fillRect(10, pongLeftY, PADDLE_WIDTH, PADDLE_HEIGHT);
+
+    // Right paddle
+    pongCtx.fillRect(PONG_WIDTH - 10 - PADDLE_WIDTH, pongRightY, PADDLE_WIDTH, PADDLE_HEIGHT);
+
+    // Ball
+    pongCtx.fillRect(pongBallX, pongBallY, BALL_SIZE, BALL_SIZE);
+}
+
+function handlePongKey(e, isDown) {
+    if (pongGameOver) return;
+    // Left paddle controls: W / S
+    if (e.key === 'w' || e.key === 'W') pongLeftMoving = isDown ? -1 : 0;
+    if (e.key === 's' || e.key === 'S') pongLeftMoving = isDown ? 1 : 0;
+    // Right paddle controls: ArrowUp / ArrowDown
+    if (e.key === 'ArrowUp') pongRightMoving = isDown ? -1 : 0;
+    if (e.key === 'ArrowDown') pongRightMoving = isDown ? 1 : 0;
+    e.preventDefault();
+}
+
+document.addEventListener('keydown', (e) => {
+    if (snakeContainer.style.display === 'block') {
+        handleSnakeKey(e);
+    } else if (pongContainer.style.display === 'block') {
+        handlePongKey(e, true);
+    } else {
+        handleTetrisKey(e);
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (pongContainer.style.display === 'block') {
+        handlePongKey(e, false);
+    }
+});
+
+resetPongBtn.addEventListener('click', initPong);
+
+pongModeSelect.addEventListener('change', () => {
+    initPong();
+});
+
+// Pong mobile controls
+function setupPongControls() {
+    const addPongControl = (btn, side, dir) => {
+        const start = () => {
+            if (side === 'left') pongLeftMoving = dir;
+            else pongRightMoving = dir;
+        };
+        const stop = () => {
+            if (side === 'left') pongLeftMoving = 0;
+            else pongRightMoving = 0;
+        };
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); start(); });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); stop(); });
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); start(); });
+        btn.addEventListener('mouseup', (e) => { e.preventDefault(); stop(); });
+    };
+    addPongControl(pongBtnLeftUp, 'left', -1);
+    addPongControl(pongBtnLeftDown, 'left', 1);
+    addPongControl(pongBtnRightUp, 'right', -1);
+    addPongControl(pongBtnRightDown, 'right', 1);
+}
+setupPongControls();
 
 // Start the game
 initGame();
