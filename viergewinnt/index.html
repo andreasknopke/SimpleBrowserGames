@@ -3,17 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vier Gewinnt</title>
+    <title>Spielhalle</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="main-container">
         <div class="game-selection">
-            <button id="btnFourWins" class="game-template-btn active">Vier Gewinnt</button>
-            <button id="btnMinesweeper" class="game-template-btn">Minesweeper</button>
-            <button id="btnTetris" class="game-template-btn">Tetris</button>
-            <button id="btnSnake" class="game-template-btn">Snake</button>
-            <button id="btnPong" class="game-template-btn">Pong</button>
+            <button id="btnFourWins" class="game-grid-btn active" data-game="fourWins">
+                <span class="btn-icon">🔴</span>
+                <span class="btn-label">Vier Gewinnt</span>
+            </button>
+            <button id="btnMinesweeper" class="game-grid-btn" data-game="minesweeper">
+                <span class="btn-icon">💣</span>
+                <span class="btn-label">Minesweeper</span>
+            </button>
+            <button id="btnTetris" class="game-grid-btn" data-game="tetris">
+                <span class="btn-icon">🧱</span>
+                <span class="btn-label">Tetris</span>
+            </button>
+            <button id="btnSnake" class="game-grid-btn" data-game="snake">
+                <span class="btn-icon">🐍</span>
+                <span class="btn-label">Snake</span>
+            </button>
+            <button id="btnPong" class="game-grid-btn" data-game="pong">
+                <span class="btn-icon">🏓</span>
+                <span class="btn-label">Pong</span>
+            </button>
+            <button id="btnSpaceInvaders" class="game-grid-btn" data-game="spaceInvaders">
+                <span class="btn-icon">👾</span>
+                <span class="btn-label">Space Invaders</span>
+            </button>
+            <button id="btnBreakout" class="game-grid-btn" data-game="breakout">
+                <span class="btn-icon">🧱</span>
+                <span class="btn-label">Breakout</span>
+            </button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -147,6 +170,45 @@
                         <span class="pong-label">|</span>
                         <button id="pongBtnRightUp" class="pong-ctrl-btn">P2 ▲</button>
                         <button id="pongBtnRightDown" class="pong-ctrl-btn">P2 ▼</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="spaceInvadersContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Space Invaders</h1>
+                <div class="controls">
+                    <button id="resetSpaceInvadersBtn">Neues Spiel</button>
+                </div>
+                <div id="spaceInvadersStatus">Punkte: 0</div>
+                <div class="space-invaders-game-area">
+                    <canvas id="spaceInvadersCanvas" width="480" height="400"></canvas>
+                </div>
+                <div class="space-invaders-mobile-controls">
+                    <div class="space-invaders-controls-row">
+                        <button id="spaceInvadersBtnLeft" class="space-invaders-ctrl-btn">◀ Links</button>
+                        <button id="spaceInvadersBtnShoot" class="space-invaders-ctrl-btn">🔀 Schießen</button>
+                        <button id="spaceInvadersBtnRight" class="space-invaders-ctrl-btn">Rechts ▶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="breakoutContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Breakout</h1>
+                <div class="controls">
+                    <button id="resetBreakoutBtn">Neues Spiel</button>
+                </div>
+                <div id="breakoutStatus">Punkte: 0 | Leben: 3</div>
+                <div class="breakout-game-area">
+                    <canvas id="breakoutCanvas" width="480" height="400"></canvas>
+                </div>
+                <div class="breakout-mobile-controls">
+                    <div class="breakout-controls-row">
+                        <button id="breakoutBtnLeft" class="breakout-ctrl-btn">◀ Links</button>
+                        <button id="breakoutBtnRight" class="breakout-ctrl-btn">Rechts ▶</button>
                     </div>
                 </div>
             </div>

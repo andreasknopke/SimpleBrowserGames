@@ -98,9 +98,68 @@ const pongBtnLeftDown = document.getElementById('pongBtnLeftDown');
 const pongBtnRightUp = document.getElementById('pongBtnRightUp');
 const pongBtnRightDown = document.getElementById('pongBtnRightDown');
 
+// Space Invaders elements
+const btnSpaceInvaders = document.getElementById('btnSpaceInvaders');
+const spaceInvadersContainer = document.getElementById('spaceInvadersContainer');
+const resetSpaceInvadersBtn = document.getElementById('resetSpaceInvadersBtn');
+const spaceInvadersCanvas = document.getElementById('spaceInvadersCanvas');
+const spaceInvadersStatusElement = document.getElementById('spaceInvadersStatus');
+const spaceInvadersCtx = spaceInvadersCanvas.getContext('2d');
+const spaceInvadersBtnLeft = document.getElementById('spaceInvadersBtnLeft');
+const spaceInvadersBtnRight = document.getElementById('spaceInvadersBtnRight');
+const spaceInvadersBtnShoot = document.getElementById('spaceInvadersBtnShoot');
+
+// Breakout elements
+const btnBreakout = document.getElementById('btnBreakout');
+const breakoutContainer = document.getElementById('breakoutContainer');
+const resetBreakoutBtn = document.getElementById('resetBreakoutBtn');
+const breakoutCanvas = document.getElementById('breakoutCanvas');
+const breakoutStatusElement = document.getElementById('breakoutStatus');
+const breakoutCtx = breakoutCanvas.getContext('2d');
+const breakoutBtnLeft = document.getElementById('breakoutBtnLeft');
+const breakoutBtnRight = document.getElementById('breakoutBtnRight');
+
 // Snake & Pong state
 let snakeInterval;
 let pongInterval;
+
+// Space Invaders state
+let spaceInvadersInterval;
+let siPlayerX = 220;
+let siBullets = [];
+let siAliens = [];
+let siAlienBullets = [];
+let siAlienDir = 1;
+let siAlienSpeed = 1;
+let siAlienDropAmount = 10;
+let siScore = 0;
+let siGameOver = false;
+let siAlienMoveTimer = 0;
+let siAlienMoveInterval = 30;
+
+// Breakout state
+let breakoutInterval;
+let breakoutPaddleX = 200;
+let breakoutBallX = 240;
+let breakoutBallY = 350;
+let breakoutBallDX = 3;
+let breakoutBallDY = -3;
+let breakoutBricks = [];
+let breakoutScore = 0;
+let breakoutLives = 3;
+let breakoutGameOver = false;
+let breakoutPaddleMoving = 0;
+const BREAKOUT_PADDLE_WIDTH = 80;
+const BREAKOUT_PADDLE_HEIGHT = 12;
+const BREAKOUT_BRICK_ROWS = 5;
+const BREAKOUT_BRICK_COLS = 8;
+const BREAKOUT_BRICK_WIDTH = 52;
+const BREAKOUT_BRICK_HEIGHT = 18;
+const BREAKOUT_BRICK_GAP = 6;
+const BREAKOUT_BRICK_OFFSET_TOP = 40;
+const BREAKOUT_BRICK_OFFSET_LEFT = 10;
+const BREAKOUT_BALL_RADIUS = 6;
+const BREAKOUT_PADDLE_SPEED = 6;
 
 // Game switching logic
 btnFourWins.addEventListener('click', () => {
@@ -123,11 +182,21 @@ btnPong.addEventListener('click', () => {
     switchGame('pong');
 });
 
+btnSpaceInvaders.addEventListener('click', () => {
+    switchGame('spaceInvaders');
+});
+
+btnBreakout.addEventListener('click', () => {
+    switchGame('breakout');
+});
+
 function switchGame(game) {
     // Clear all intervals to prevent multiple games running
     clearInterval(tetrisInterval);
     clearInterval(snakeInterval);
     clearInterval(pongInterval);
+    clearInterval(spaceInvadersInterval);
+    clearInterval(breakoutInterval);
 
     // Hide all containers
     fourWinsContainer.style.display = 'none';
@@ -135,6 +204,8 @@ function switchGame(game) {
     tetrisContainer.style.display = 'none';
     snakeContainer.style.display = 'none';
     pongContainer.style.display = 'none';
+    spaceInvadersContainer.style.display = 'none';
+    breakoutContainer.style.display = 'none';
 
     // Remove active class from all buttons
     btnFourWins.classList.remove('active');
@@ -142,6 +213,8 @@ function switchGame(game) {
     btnTetris.classList.remove('active');
     btnSnake.classList.remove('active');
     btnPong.classList.remove('active');
+    btnSpaceInvaders.classList.remove('active');
+    btnBreakout.classList.remove('active');
 
     if (game === 'fourWins') {
         btnFourWins.classList.add('active');
@@ -163,6 +236,14 @@ function switchGame(game) {
         btnPong.classList.add('active');
         pongContainer.style.display = 'block';
         initPong();
+    } else if (game === 'spaceInvaders') {
+        btnSpaceInvaders.classList.add('active');
+        spaceInvadersContainer.style.display = 'block';
+        initSpaceInvaders();
+    } else if (game === 'breakout') {
+        btnBreakout.classList.add('active');
+        breakoutContainer.style.display = 'block';
+        initBreakout();
     }
 }
 
@@ -1020,6 +1101,10 @@ document.addEventListener('keydown', (e) => {
         handleSnakeKey(e);
     } else if (pongContainer.style.display === 'block') {
         handlePongKey(e, true);
+    } else if (spaceInvadersContainer.style.display === 'block') {
+        handleSpaceInvadersKey(e, true);
+    } else if (breakoutContainer.style.display === 'block') {
+        handleBreakoutKey(e, true);
     } else {
         handleTetrisKey(e);
     }
@@ -1028,6 +1113,10 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('keyup', (e) => {
     if (pongContainer.style.display === 'block') {
         handlePongKey(e, false);
+    } else if (spaceInvadersContainer.style.display === 'block') {
+        handleSpaceInvadersKey(e, false);
+    } else if (breakoutContainer.style.display === 'block') {
+        handleBreakoutKey(e, false);
     }
 });
 
@@ -1059,6 +1148,423 @@ function setupPongControls() {
     addPongControl(pongBtnRightDown, 'right', 1);
 }
 setupPongControls();
+
+// =============================================
+// Space Invaders Game
+// =============================================
+
+const SI_ALIEN_ROWS = 4;
+const SI_ALIEN_COLS = 8;
+const SI_ALIEN_WIDTH = 30;
+const SI_ALIEN_HEIGHT = 20;
+const SI_ALIEN_GAP = 10;
+const SI_ALIEN_OFFSET_TOP = 40;
+const SI_ALIEN_OFFSET_LEFT = 20;
+const SI_PLAYER_WIDTH = 40;
+const SI_PLAYER_HEIGHT = 20;
+const SI_BULLET_WIDTH = 3;
+const SI_BULLET_HEIGHT = 10;
+const SI_ALIEN_BULLET_WIDTH = 3;
+const SI_ALIEN_BULLET_HEIGHT = 8;
+
+function initSpaceInvaders() {
+    clearInterval(spaceInvadersInterval);
+    siPlayerX = (spaceInvadersCanvas.width - SI_PLAYER_WIDTH) / 2;
+    siBullets = [];
+    siAlienBullets = [];
+    siScore = 0;
+    siGameOver = false;
+    siAlienDir = 1;
+    siAlienSpeed = 1;
+    siAlienMoveTimer = 0;
+    siAlienMoveInterval = 30;
+    spaceInvadersStatusElement.textContent = 'Punkte: 0';
+
+    // Create aliens
+    siAliens = [];
+    for (let r = 0; r < SI_ALIEN_ROWS; r++) {
+        for (let c = 0; c < SI_ALIEN_COLS; c++) {
+            siAliens.push({
+                x: SI_ALIEN_OFFSET_LEFT + c * (SI_ALIEN_WIDTH + SI_ALIEN_GAP),
+                y: SI_ALIEN_OFFSET_TOP + r * (SI_ALIEN_HEIGHT + SI_ALIEN_GAP),
+                alive: true,
+                row: r
+            });
+        }
+    }
+
+    spaceInvadersInterval = setInterval(() => {
+        updateSpaceInvaders();
+        drawSpaceInvaders();
+    }, 16);
+}
+
+function updateSpaceInvaders() {
+    if (siGameOver) return;
+
+    // Move aliens
+    siAlienMoveTimer++;
+    if (siAlienMoveTimer >= siAlienMoveInterval) {
+        siAlienMoveTimer = 0;
+        let shouldDrop = false;
+        const aliveAliens = siAliens.filter(a => a.alive);
+
+        // Check if any alien needs to drop
+        for (const alien of aliveAliens) {
+            if ((siAlienDir === 1 && alien.x + SI_ALIEN_WIDTH >= spaceInvadersCanvas.width - 10) ||
+                (siAlienDir === -1 && alien.x <= 10)) {
+                shouldDrop = true;
+                break;
+            }
+        }
+
+        if (shouldDrop) {
+            siAlienDir *= -1;
+            for (const alien of aliveAliens) {
+                alien.y += siAlienDropAmount;
+            }
+            // Increase speed when aliens are lower
+            if (aliveAliens.length > 0) {
+                const minRow = Math.min(...aliveAliens.map(a => a.row));
+                siAlienMoveInterval = Math.max(5, 30 - minRow * 5);
+            }
+        } else {
+            for (const alien of aliveAliens) {
+                alien.x += siAlienDir * siAlienSpeed;
+            }
+        }
+
+        // Random alien shooting
+        if (aliveAliens.length > 0 && Math.random() < 0.3) {
+            const shooter = aliveAliens[Math.floor(Math.random() * aliveAliens.length)];
+            siAlienBullets.push({
+                x: shooter.x + SI_ALIEN_WIDTH / 2,
+                y: shooter.y + SI_ALIEN_HEIGHT,
+                speed: 3
+            });
+        }
+
+        // Check if aliens reached bottom
+        for (const alien of aliveAliens) {
+            if (alien.y + SI_ALIEN_HEIGHT >= spaceInvadersCanvas.height - SI_PLAYER_HEIGHT - 20) {
+                siGameOver = true;
+                spaceInvadersStatusElement.textContent = `Game Over! Punkte: ${siScore}`;
+                clearInterval(spaceInvadersInterval);
+                return;
+            }
+        }
+
+        // Check win
+        if (aliveAliens.length === 0) {
+            // Respawn aliens with faster speed
+            siAlienSpeed += 0.5;
+            siAlienMoveInterval = Math.max(5, 30 - siAlienSpeed * 3);
+            for (let r = 0; r < SI_ALIEN_ROWS; r++) {
+                for (let c = 0; c < SI_ALIEN_COLS; c++) {
+                    siAliens.push({
+                        x: SI_ALIEN_OFFSET_LEFT + c * (SI_ALIEN_WIDTH + SI_ALIEN_GAP),
+                        y: SI_ALIEN_OFFSET_TOP + r * (SI_ALIEN_HEIGHT + SI_ALIEN_GAP),
+                        alive: true,
+                        row: r
+                    });
+                }
+            }
+        }
+    }
+
+    // Move player bullets
+    for (let i = siBullets.length - 1; i >= 0; i--) {
+        siBullets[i].y -= 5;
+        if (siBullets[i].y < 0) {
+            siBullets.splice(i, 1);
+        }
+    }
+
+    // Move alien bullets
+    for (let i = siAlienBullets.length - 1; i >= 0; i--) {
+        siAlienBullets[i].y += siAlienBullets[i].speed;
+        if (siAlienBullets[i].y > spaceInvadersCanvas.height) {
+            siAlienBullets.splice(i, 1);
+        }
+    }
+
+    // Check bullet-alien collisions
+    for (let i = siBullets.length - 1; i >= 0; i--) {
+        const bullet = siBullets[i];
+        for (const alien of siAliens) {
+            if (alien.alive &&
+                bullet.x < alien.x + SI_ALIEN_WIDTH &&
+                bullet.x + SI_BULLET_WIDTH > alien.x &&
+                bullet.y < alien.y + SI_ALIEN_HEIGHT &&
+                bullet.y + SI_BULLET_HEIGHT > alien.y) {
+                alien.alive = false;
+                siBullets.splice(i, 1);
+                siScore += (SI_ALIEN_ROWS - alien.row) * 10;
+                spaceInvadersStatusElement.textContent = `Punkte: ${siScore}`;
+                break;
+            }
+        }
+    }
+
+    // Check alien bullet-player collisions
+    for (const bullet of siAlienBullets) {
+        if (bullet.x < siPlayerX + SI_PLAYER_WIDTH &&
+            bullet.x + SI_ALIEN_BULLET_WIDTH > siPlayerX &&
+            bullet.y < spaceInvadersCanvas.height - 30 &&
+            bullet.y + SI_ALIEN_BULLET_HEIGHT > spaceInvadersCanvas.height - 30) {
+            siGameOver = true;
+            spaceInvadersStatusElement.textContent = `Game Over! Punkte: ${siScore}`;
+            clearInterval(spaceInvadersInterval);
+            return;
+        }
+    }
+}
+
+function drawSpaceInvaders() {
+    spaceInvadersCtx.clearRect(0, 0, spaceInvadersCanvas.width, spaceInvadersCanvas.height);
+
+    // Draw aliens
+    for (const alien of siAliens) {
+        if (!alien.alive) continue;
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00'];
+        spaceInvadersCtx.fillStyle = colors[alien.row % colors.length];
+        spaceInvadersCtx.fillRect(alien.x, alien.y, SI_ALIEN_WIDTH, SI_ALIEN_HEIGHT);
+        // Eyes
+        spaceInvadersCtx.fillStyle = '#000';
+        spaceInvadersCtx.fillRect(alien.x + 7, alien.y + 6, 5, 5);
+        spaceInvadersCtx.fillRect(alien.x + 18, alien.y + 6, 5, 5);
+    }
+
+    // Draw player
+    spaceInvadersCtx.fillStyle = '#00ff00';
+    spaceInvadersCtx.fillRect(siPlayerX, spaceInvadersCanvas.height - 30, SI_PLAYER_WIDTH, SI_PLAYER_HEIGHT);
+    // Player cannon
+    spaceInvadersCtx.fillRect(siPlayerX + SI_PLAYER_WIDTH / 2 - 3, spaceInvadersCanvas.height - 38, 6, 8);
+
+    // Draw player bullets
+    spaceInvadersCtx.fillStyle = '#ffff00';
+    for (const bullet of siBullets) {
+        spaceInvadersCtx.fillRect(bullet.x, bullet.y, SI_BULLET_WIDTH, SI_BULLET_HEIGHT);
+    }
+
+    // Draw alien bullets
+    spaceInvadersCtx.fillStyle = '#ff4444';
+    for (const bullet of siAlienBullets) {
+        spaceInvadersCtx.fillRect(bullet.x, bullet.y, SI_ALIEN_BULLET_WIDTH, SI_ALIEN_BULLET_HEIGHT);
+    }
+}
+
+function handleSpaceInvadersKey(e, isDown) {
+    if (isDown) {
+        if (e.key === 'ArrowLeft' || e.key === 'a') {
+            siPlayerX = Math.max(0, siPlayerX - 15);
+        }
+        if (e.key === 'ArrowRight' || e.key === 'd') {
+            siPlayerX = Math.min(spaceInvadersCanvas.width - SI_PLAYER_WIDTH, siPlayerX + 15);
+        }
+        if (e.key === ' ' || e.key === 'Space') {
+            if (siBullets.length < 3) {
+                siBullets.push({
+                    x: siPlayerX + SI_PLAYER_WIDTH / 2 - SI_BULLET_WIDTH / 2,
+                    y: spaceInvadersCanvas.height - 38
+                });
+            }
+        }
+    }
+    e.preventDefault();
+}
+
+resetSpaceInvadersBtn.addEventListener('click', initSpaceInvaders);
+
+// Space Invaders mobile controls
+function setupSpaceInvadersControls() {
+    const addControl = (btn, action) => {
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); action(); });
+        btn.addEventListener('click', (e) => { e.preventDefault(); action(); });
+    };
+    addControl(spaceInvadersBtnLeft, () => {
+        if (!siGameOver) siPlayerX = Math.max(0, siPlayerX - 15);
+    });
+    addControl(spaceInvadersBtnRight, () => {
+        if (!siGameOver) siPlayerX = Math.min(spaceInvadersCanvas.width - SI_PLAYER_WIDTH, siPlayerX + 15);
+    });
+    addControl(spaceInvadersBtnShoot, () => {
+        if (!siGameOver && siBullets.length < 3) {
+            siBullets.push({
+                x: siPlayerX + SI_PLAYER_WIDTH / 2 - SI_BULLET_WIDTH / 2,
+                y: spaceInvadersCanvas.height - 38
+            });
+        }
+    });
+}
+setupSpaceInvadersControls();
+
+// =============================================
+// Breakout Game
+// =============================================
+
+function initBreakout() {
+    clearInterval(breakoutInterval);
+    breakoutPaddleX = (breakoutCanvas.width - BREAKOUT_PADDLE_WIDTH) / 2;
+    breakoutBallX = breakoutCanvas.width / 2;
+    breakoutBallY = breakoutCanvas.height - 40;
+    breakoutBallDX = 3 * (Math.random() > 0.5 ? 1 : -1);
+    breakoutBallDY = -3;
+    breakoutScore = 0;
+    breakoutLives = 3;
+    breakoutGameOver = false;
+    breakoutPaddleMoving = 0;
+
+    // Create bricks
+    breakoutBricks = [];
+    const brickColors = ['#ff0000', '#ff7700', '#ffff00', '#00ff00', '#0000ff'];
+    for (let r = 0; r < BREAKOUT_BRICK_ROWS; r++) {
+        for (let c = 0; c < BREAKOUT_BRICK_COLS; c++) {
+            breakoutBricks.push({
+                x: BREAKOUT_BRICK_OFFSET_LEFT + c * (BREAKOUT_BRICK_WIDTH + BREAKOUT_BRICK_GAP),
+                y: BREAKOUT_BRICK_OFFSET_TOP + r * (BREAKOUT_BRICK_HEIGHT + BREAKOUT_BRICK_GAP),
+                color: brickColors[r],
+                alive: true
+            });
+        }
+    }
+
+    breakoutStatusElement.textContent = `Punkte: 0 | Leben: ${breakoutLives}`;
+
+    breakoutInterval = setInterval(() => {
+        updateBreakout();
+        drawBreakout();
+    }, 16);
+}
+
+function updateBreakout() {
+    if (breakoutGameOver) return;
+
+    // Move paddle
+    breakoutPaddleX += breakoutPaddleMoving * BREAKOUT_PADDLE_SPEED;
+    breakoutPaddleX = Math.max(0, Math.min(breakoutCanvas.width - BREAKOUT_PADDLE_WIDTH, breakoutPaddleX));
+
+    // Move ball
+    breakoutBallX += breakoutBallDX;
+    breakoutBallY += breakoutBallDY;
+
+    // Wall collisions
+    if (breakoutBallX - BREAKOUT_BALL_RADIUS <= 0 || breakoutBallX + BREAKOUT_BALL_RADIUS >= breakoutCanvas.width) {
+        breakoutBallDX = -breakoutBallDX;
+    }
+    if (breakoutBallY - BREAKOUT_BALL_RADIUS <= 0) {
+        breakoutBallDY = -breakoutBallDY;
+    }
+
+    // Paddle collision
+    if (breakoutBallY + BREAKOUT_BALL_RADIUS >= breakoutCanvas.height - 30 &&
+        breakoutBallY + BREAKOUT_BALL_RADIUS <= breakoutCanvas.height - 15 &&
+        breakoutBallX >= breakoutPaddleX &&
+        breakoutBallX <= breakoutPaddleX + BREAKOUT_PADDLE_WIDTH) {
+        breakoutBallDY = -Math.abs(breakoutBallDY);
+        // Add angle based on where ball hits paddle
+        const hitPos = (breakoutBallX - breakoutPaddleX) / BREAKOUT_PADDLE_WIDTH;
+        breakoutBallDX = 6 * (hitPos - 0.5);
+    }
+
+    // Bottom collision (lose life)
+    if (breakoutBallY + BREAKOUT_BALL_RADIUS > breakoutCanvas.height) {
+        breakoutLives--;
+        if (breakoutLives <= 0) {
+            breakoutGameOver = true;
+            breakoutStatusElement.textContent = `Game Over! Punkte: ${breakoutScore}`;
+            clearInterval(breakoutInterval);
+            return;
+        }
+        breakoutBallX = breakoutCanvas.width / 2;
+        breakoutBallY = breakoutCanvas.height - 40;
+        breakoutBallDX = 3 * (Math.random() > 0.5 ? 1 : -1);
+        breakoutBallDY = -3;
+        breakoutStatusElement.textContent = `Punkte: ${breakoutScore} | Leben: ${breakoutLives}`;
+    }
+
+    // Brick collisions
+    for (const brick of breakoutBricks) {
+        if (!brick.alive) continue;
+        if (breakoutBallX + BREAKOUT_BALL_RADIUS > brick.x &&
+            breakoutBallX - BREAKOUT_BALL_RADIUS < brick.x + BREAKOUT_BRICK_WIDTH &&
+            breakoutBallY + BREAKOUT_BALL_RADIUS > brick.y &&
+            breakoutBallY - BREAKOUT_BALL_RADIUS < brick.y + BREAKOUT_BRICK_HEIGHT) {
+            brick.alive = false;
+            breakoutBallDY = -breakoutBallDY;
+            breakoutScore += 10;
+            breakoutStatusElement.textContent = `Punkte: ${breakoutScore} | Leben: ${breakoutLives}`;
+            break;
+        }
+    }
+
+    // Check win
+    if (breakoutBricks.every(b => !b.alive)) {
+        breakoutGameOver = true;
+        breakoutStatusElement.textContent = `Gewonnen! Punkte: ${breakoutScore}`;
+        clearInterval(breakoutInterval);
+    }
+}
+
+function drawBreakout() {
+    breakoutCtx.clearRect(0, 0, breakoutCanvas.width, breakoutCanvas.height);
+
+    // Draw bricks
+    for (const brick of breakoutBricks) {
+        if (!brick.alive) continue;
+        breakoutCtx.fillStyle = brick.color;
+        breakoutCtx.fillRect(brick.x, brick.y, BREAKOUT_BRICK_WIDTH, BREAKOUT_BRICK_HEIGHT);
+        breakoutCtx.strokeStyle = '#333';
+        breakoutCtx.strokeRect(brick.x, brick.y, BREAKOUT_BRICK_WIDTH, BREAKOUT_BRICK_HEIGHT);
+    }
+
+    // Draw paddle
+    breakoutCtx.fillStyle = '#007bff';
+    breakoutCtx.fillRect(breakoutPaddleX, breakoutCanvas.height - 30, BREAKOUT_PADDLE_WIDTH, BREAKOUT_PADDLE_HEIGHT);
+
+    // Draw ball
+    breakoutCtx.beginPath();
+    breakoutCtx.arc(breakoutBallX, breakoutBallY, BREAKOUT_BALL_RADIUS, 0, Math.PI * 2);
+    breakoutCtx.fillStyle = '#fff';
+    breakoutCtx.fill();
+    breakoutCtx.closePath();
+}
+
+function handleBreakoutKey(e, isDown) {
+    if (isDown) {
+        if (e.key === 'ArrowLeft' || e.key === 'a') {
+            breakoutPaddleMoving = -1;
+        }
+        if (e.key === 'ArrowRight' || e.key === 'd') {
+            breakoutPaddleMoving = 1;
+        }
+    } else {
+        if ((e.key === 'ArrowLeft' || e.key === 'a') && breakoutPaddleMoving === -1) {
+            breakoutPaddleMoving = 0;
+        }
+        if ((e.key === 'ArrowRight' || e.key === 'd') && breakoutPaddleMoving === 1) {
+            breakoutPaddleMoving = 0;
+        }
+    }
+    e.preventDefault();
+}
+
+resetBreakoutBtn.addEventListener('click', initBreakout);
+
+// Breakout mobile controls
+function setupBreakoutControls() {
+    const addControl = (btn, direction) => {
+        const start = () => { breakoutPaddleMoving = direction; };
+        const stop = () => { breakoutPaddleMoving = 0; };
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); start(); });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); stop(); });
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); start(); });
+        btn.addEventListener('mouseup', (e) => { e.preventDefault(); stop(); });
+    };
+    addControl(breakoutBtnLeft, -1);
+    addControl(breakoutBtnRight, 1);
+}
+setupBreakoutControls();
 
 // Start the game
 initGame();

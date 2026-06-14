@@ -101,24 +101,52 @@ body {
 }
 
 .game-selection {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.8rem;
+    width: 100%;
+    max-width: 680px;
+    padding: 0.5rem;
+    margin: 0 auto;
+}
+
+.game-grid-btn {
     display: flex;
-    gap: 1rem;
-}
-
-.game-template-btn {
-    padding: 1rem 2rem;
-    font-size: 1.2rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.9rem 0.5rem;
+    font-size: 0.95rem;
     cursor: pointer;
-    border: none;
-    border-radius: 10px;
-    background-color: #ccc;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    background-color: #fff;
     transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    min-width: 0;
 }
 
-.game-template-btn.active {
+.game-grid-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.game-grid-btn.active {
     background-color: #007bff;
     color: white;
-    transform: scale(1.1);
+    border-color: #007bff;
+    transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(0,123,255,0.4);
+}
+
+.btn-icon {
+    font-size: 1.6rem;
+}
+
+.btn-label {
+    font-weight: 600;
+    font-size: 0.85rem;
 }
 
 .game-container {
@@ -130,31 +158,6 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 2rem;
-}
-
-.game-selection {
-    display: flex;
-    gap: 1rem;
-}
-
-.game-template-btn {
-    padding: 1rem 2rem;
-    font-size: 1.2rem;
-    cursor: pointer;
-    border: none;
-    border-radius: 10px;
-    background-color: #ccc;
-    transition: all 0.3s;
-}
-
-.game-template-btn.active {
-    background-color: #007bff;
-    color: white;
-    transform: scale(1.1);
-}
-
-.game-container {
-    transition: opacity 0.3s;
 }
 
 .container {
@@ -415,4 +418,120 @@ button:hover {
     color: #333;
     font-size: 1.5rem;
     font-weight: bold;
+}
+
+/* ========== Space Invaders ========== */
+
+#spaceInvadersCanvas {
+    background: #000;
+    display: block;
+    border: 4px solid #fff;
+    border-radius: 8px;
+    margin: 0 auto;
+}
+
+.space-invaders-game-area {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+#spaceInvadersContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100%;
+}
+
+.space-invaders-mobile-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.space-invaders-controls-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.space-invaders-ctrl-btn {
+    padding: 16px 24px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 12px;
+    background-color: #444;
+    color: white;
+    transition: background-color 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-width: 80px;
+}
+
+.space-invaders-ctrl-btn:active {
+    background-color: #00ff00;
+    transform: scale(0.95);
+}
+
+/* ========== Breakout ========== */
+
+#breakoutCanvas {
+    background: #000;
+    display: block;
+    border: 4px solid #fff;
+    border-radius: 8px;
+    margin: 0 auto;
+}
+
+.breakout-game-area {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+#breakoutContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100%;
+}
+
+.breakout-mobile-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.breakout-controls-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.breakout-ctrl-btn {
+    padding: 16px 24px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 12px;
+    background-color: #444;
+    color: white;
+    transition: background-color 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-width: 80px;
+}
+
+.breakout-ctrl-btn:active {
+    background-color: #ff7700;
+    transform: scale(0.95);
 }
