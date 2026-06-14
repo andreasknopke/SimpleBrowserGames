@@ -37,6 +37,10 @@
                 <span class="btn-icon">🧱</span>
                 <span class="btn-label">Breakout</span>
             </button>
+            <button id="btnBoulderDash" class="game-grid-btn" data-game="boulderDash">
+                <span class="btn-icon">🪨</span>
+                <span class="btn-label">Boulder Dash</span>
+            </button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -209,6 +213,29 @@
                     <div class="breakout-controls-row">
                         <button id="breakoutBtnLeft" class="breakout-ctrl-btn">◀ Links</button>
                         <button id="breakoutBtnRight" class="breakout-ctrl-btn">Rechts ▶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="boulderDashContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Boulder Dash</h1>
+                <div class="controls">
+                    <button id="resetBdBtn">Neues Spiel</button>
+                </div>
+                <div id="bdStatus">Sammle 💎 0/0</div>
+                <div class="bd-game-area">
+                    <canvas id="bdCanvas" width="400" height="400"></canvas>
+                </div>
+                <div class="bd-mobile-controls">
+                    <div class="bd-controls-row">
+                        <button id="bdBtnUp" class="bd-ctrl-btn">▲</button>
+                    </div>
+                    <div class="bd-controls-row">
+                        <button id="bdBtnLeft" class="bd-ctrl-btn">◀</button>
+                        <button id="bdBtnDown" class="bd-ctrl-btn">▼</button>
+                        <button id="bdBtnRight" class="bd-ctrl-btn">▶</button>
                     </div>
                 </div>
             </div>
