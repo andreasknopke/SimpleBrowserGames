@@ -2005,46 +2005,57 @@ function updateBdPhysics(): void {
     for (let y = BD_SIZE - 2; y >= 1; y--) {
         for (let x = BD_SIZE - 2; x >= 1; x--) {
             if (bd.board[y][x] === BD_BOULDER_CHAR) {
-                // Try to fall straight down
-                if (bd.board[y + 1][x] === BD_EMPTY_CHAR) {
-                    bd.board[y + 1][x] = BD_BOULDER_CHAR;
-                    bd.board[y][x] = BD_EMPTY_CHAR;
-                    // Check if boulder falls on player
+                const below = bd.board[y + 1][x];
+
+                // Fall straight down only through empty space (not dirt!)
+                if (below === BD_EMPTY_CHAR) {
+                    // Check if boulder falls on player — crushes player (game over)
                     if (y + 1 === bd.playerY && x === bd.playerX) {
+                        bd.board[y][x] = BD_EMPTY_CHAR;
+                        bd.board[y + 1][x] = BD_BOULDER_CHAR;
                         bd.gameOver = true;
                         updateBdStatus();
                         if (bd.interval) clearInterval(bd.interval);
                         drawBdBoard();
                         return;
                     }
-                    // Check if boulder falls on diamond (crushes it)
-                    // This is handled because we already checked empty
-                } else if (bd.board[y + 1][x] === BD_BOULDER_CHAR || bd.board[y + 1][x] === BD_WALL_CHAR || bd.board[y + 1][x] === BD_DIRT_CHAR) {
-                    // Try to roll left or right if supported on a diagonal
-                    const canRollLeft: boolean = (x > 1 && bd.board[y + 1][x - 1] !== BD_EMPTY_CHAR && bd.board[y][x - 1] === BD_EMPTY_CHAR);
-                    const canRollRight: boolean = (x < BD_SIZE - 2 && bd.board[y + 1][x + 1] !== BD_EMPTY_CHAR && bd.board[y][x + 1] === BD_EMPTY_CHAR);
+                    // Fall down (replaces empty space)
+                    bd.board[y + 1][x] = BD_BOULDER_CHAR;
+                    bd.board[y][x] = BD_EMPTY_CHAR;
+                }
+                // Only roll when blocked by wall or another boulder (NOT dirt — boulders sit on dirt)
+                else if (below === BD_WALL_CHAR || below === BD_BOULDER_CHAR) {
+                    // Roll left: need solid diagonal support (wall or boulder below-left) + empty space or player to the left
+                    const canRollLeft: boolean = (x > 1 && (bd.board[y + 1][x - 1] === BD_WALL_CHAR || bd.board[y + 1][x - 1] === BD_BOULDER_CHAR) && (bd.board[y][x - 1] === BD_EMPTY_CHAR || bd.board[y][x - 1] === BD_PLAYER_CHAR));
+                    // Roll right: need solid diagonal support (wall or boulder below-right) + empty space or player to the right
+                    const canRollRight: boolean = (x < BD_SIZE - 2 && (bd.board[y + 1][x + 1] === BD_WALL_CHAR || bd.board[y + 1][x + 1] === BD_BOULDER_CHAR) && (bd.board[y][x + 1] === BD_EMPTY_CHAR || bd.board[y][x + 1] === BD_PLAYER_CHAR));
 
                     if (canRollLeft) {
+                        // Check if boulder rolls onto player — crushes player (game over)
+                        if (y === bd.playerY && x - 1 === bd.playerX) {
+                            bd.board[y][x] = BD_EMPTY_CHAR;
+                            bd.board[y][x - 1] = BD_BOULDER_CHAR;
+                            bd.gameOver = true;
+                            updateBdStatus();
+                            if (bd.interval) clearInterval(bd.interval);
+                            drawBdBoard();
+                            return;
+                        }
                         bd.board[y][x - 1] = BD_BOULDER_CHAR;
                         bd.board[y][x] = BD_EMPTY_CHAR;
-                        // Check if boulder rolls onto player
-                        if (y === bd.playerY && x - 1 === bd.playerX) {
+                    } else if (canRollRight) {
+                        // Check if boulder rolls onto player — crushes player (game over)
+                        if (y === bd.playerY && x + 1 === bd.playerX) {
+                            bd.board[y][x] = BD_EMPTY_CHAR;
+                            bd.board[y][x + 1] = BD_BOULDER_CHAR;
                             bd.gameOver = true;
                             updateBdStatus();
                             if (bd.interval) clearInterval(bd.interval);
                             drawBdBoard();
                             return;
                         }
-                    } else if (canRollRight) {
                         bd.board[y][x + 1] = BD_BOULDER_CHAR;
                         bd.board[y][x] = BD_EMPTY_CHAR;
-                        if (y === bd.playerY && x + 1 === bd.playerX) {
-                            bd.gameOver = true;
-                            updateBdStatus();
-                            if (bd.interval) clearInterval(bd.interval);
-                            drawBdBoard();
-                            return;
-                        }
                     }
                 }
             }
