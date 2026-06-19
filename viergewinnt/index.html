@@ -41,6 +41,10 @@
                 <span class="btn-icon">🪨</span>
                 <span class="btn-label">Boulder Dash</span>
             </button>
+            <button id="btnTowerDefense" class="game-grid-btn" data-game="towerDefense">
+                <span class="btn-icon">🏰</span>
+                <span class="btn-label">Verteidigung</span>
+            </button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -238,6 +242,49 @@
                         <button id="bdBtnRight" class="bd-ctrl-btn">▶</button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div id="tdContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Tower Defense</h1>
+                <div class="controls td-controls">
+                    <div class="td-stats">
+                        <span class="td-stat">💰 <span id="tdGold">180</span></span>
+                        <span class="td-stat">❤️ <span id="tdLives">20</span></span>
+                        <span class="td-stat">🌊 Welle <span id="tdWave">0/10</span></span>
+                        <span class="td-stat">⭐ <span id="tdScore">0</span></span>
+                    </div>
+                    <button id="resetTdBtn">Neues Spiel</button>
+                    <button id="tdNextWaveBtn">Nächste Welle</button>
+                </div>
+                <div id="tdStatus">Baue Türme und starte die nächste Welle!</div>
+                <div class="td-tower-bar">
+                    <button id="tdTowerArcher" class="td-tower-btn selected" data-type="archer">
+                        <span class="td-tower-icon" style="background:#28a745;">A</span>
+                        <span class="td-tower-name">Bogenschütze</span>
+                        <span class="td-tower-cost">50 💰</span>
+                    </button>
+                    <button id="tdTowerFire" class="td-tower-btn" data-type="fire">
+                        <span class="td-tower-icon" style="background:#ff6600;">F</span>
+                        <span class="td-tower-name">Feuer</span>
+                        <span class="td-tower-cost">120 💰</span>
+                    </button>
+                    <button id="tdTowerIce" class="td-tower-btn" data-type="ice">
+                        <span class="td-tower-icon" style="background:#00ccff;">I</span>
+                        <span class="td-tower-name">Eis</span>
+                        <span class="td-tower-cost">100 💰</span>
+                    </button>
+                    <button id="tdTowerLightning" class="td-tower-btn" data-type="lightning">
+                        <span class="td-tower-icon" style="background:#cc00ff;">L</span>
+                        <span class="td-tower-name">Blitz</span>
+                        <span class="td-tower-cost">175 💰</span>
+                    </button>
+                </div>
+                <div class="td-game-area">
+                    <canvas id="tdCanvas" width="600" height="500"></canvas>
+                </div>
+                <p class="td-hint">Klicke auf ein freies Feld, um einen Turm zu platzieren. Türme können nicht auf den Weg gesetzt werden.</p>
             </div>
         </div>
     </div>

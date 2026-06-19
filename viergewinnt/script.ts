@@ -6,7 +6,7 @@ type Player = 1 | 2;
 type CellValue = 0 | Player;
 type Board = CellValue[][];
 type GameMode = '1p' | '2p';
-type GameId = 'fourWins' | 'minesweeper' | 'tetris' | 'snake' | 'pong' | 'spaceInvaders' | 'breakout' | 'boulderDash';
+type GameId = 'fourWins' | 'minesweeper' | 'tetris' | 'snake' | 'pong' | 'spaceInvaders' | 'breakout' | 'boulderDash' | 'towerDefense';
 
 type MsCellValue = number | 'M';
 type MsBoard = MsCellValue[][];
@@ -338,6 +338,22 @@ const bdBtnLeft: HTMLElement | null = document.getElementById('bdBtnLeft');
 const bdBtnRight: HTMLElement | null = document.getElementById('bdBtnRight');
 
 // =============================================
+// Tower Defense DOM References
+// =============================================
+
+const btnTowerDefense: HTMLElement | null = document.getElementById('btnTowerDefense');
+const tdContainer: HTMLElement | null = document.getElementById('tdContainer');
+const resetTdBtn: HTMLElement | null = document.getElementById('resetTdBtn');
+const tdCanvas: HTMLCanvasElement | null = document.getElementById('tdCanvas') as HTMLCanvasElement;
+const tdStatus: HTMLElement | null = document.getElementById('tdStatus');
+const tdGoldDisplay: HTMLElement | null = document.getElementById('tdGold');
+const tdLivesDisplay: HTMLElement | null = document.getElementById('tdLives');
+const tdWaveDisplay: HTMLElement | null = document.getElementById('tdWave');
+const tdScoreDisplay: HTMLElement | null = document.getElementById('tdScore');
+const tdNextWaveBtn: HTMLButtonElement | null = document.getElementById('tdNextWaveBtn') as HTMLButtonElement;
+let tdInterval: ReturnType<typeof setInterval> | undefined;
+
+// =============================================
 // Game Switching Logic
 // =============================================
 
@@ -349,6 +365,7 @@ if (btnPong) btnPong.addEventListener('click', () => switchGame('pong'));
 if (btnSpaceInvaders) btnSpaceInvaders.addEventListener('click', () => switchGame('spaceInvaders'));
 if (btnBreakout) btnBreakout.addEventListener('click', () => switchGame('breakout'));
 if (btnBoulderDash) btnBoulderDash.addEventListener('click', () => switchGame('boulderDash'));
+if (btnTowerDefense) btnTowerDefense.addEventListener('click', () => switchGame('towerDefense'));
 
 function switchGame(game: GameId): void {
     // Clear all intervals to prevent multiple games running
@@ -358,6 +375,7 @@ function switchGame(game: GameId): void {
     if (spaceInvadersInterval) clearInterval(spaceInvadersInterval);
     if (breakoutInterval) clearInterval(breakoutInterval);
     if (bd.interval) clearInterval(bd.interval);
+    if (tdInterval) clearInterval(tdInterval);
 
     // Hide all containers
     if (fourWinsContainer) fourWinsContainer.style.display = 'none';
@@ -368,6 +386,7 @@ function switchGame(game: GameId): void {
     if (spaceInvadersContainer) spaceInvadersContainer.style.display = 'none';
     if (breakoutContainer) breakoutContainer.style.display = 'none';
     if (boulderDashContainer) boulderDashContainer.style.display = 'none';
+    if (tdContainer) tdContainer.style.display = 'none';
 
     // Remove active class from all buttons
     if (btnFourWins) btnFourWins.classList.remove('active');
@@ -378,6 +397,7 @@ function switchGame(game: GameId): void {
     if (btnSpaceInvaders) btnSpaceInvaders.classList.remove('active');
     if (btnBreakout) btnBreakout.classList.remove('active');
     if (btnBoulderDash) btnBoulderDash.classList.remove('active');
+    if (btnTowerDefense) btnTowerDefense.classList.remove('active');
 
     if (game === 'fourWins') {
         if (btnFourWins) btnFourWins.classList.add('active');
@@ -411,6 +431,10 @@ function switchGame(game: GameId): void {
         if (btnBoulderDash) btnBoulderDash.classList.add('active');
         if (boulderDashContainer) boulderDashContainer.style.display = 'block';
         initBoulderDash();
+    } else if (game === 'towerDefense') {
+        if (btnTowerDefense) btnTowerDefense.classList.add('active');
+        if (tdContainer) tdContainer.style.display = 'block';
+        initTowerDefense();
     }
 }
 
@@ -2121,6 +2145,654 @@ function setupBdMobileControls(): void {
 setupBdMobileControls();
 
 if (resetBdBtn) resetBdBtn.addEventListener('click', () => initBoulderDash());
+
+// =============================================
+// Tower Defense Game
+// =============================================
+
+interface TdWaypoint {
+    c: number;
+    r: number;
+}
+
+interface TdEnemy {
+    x: number;
+    y: number;
+    hp: number;
+    maxHp: number;
+    speed: number;
+    baseSpeed: number;
+    reward: number;
+    pathIndex: number;
+    radius: number;
+    color: string;
+    frozen: number;
+    poison: number;
+    poisonTimer: number;
+    type: 'normal' | 'fast' | 'tank' | 'boss';
+}
+
+interface TdTower {
+    c: number;
+    r: number;
+    type: 'archer' | 'fire' | 'ice' | 'lightning';
+    level: number;
+    cooldown: number;
+    maxCooldown: number;
+    range: number;
+    damage: number;
+}
+
+interface TdProjectile {
+    x: number;
+    y: number;
+    target: TdEnemy;
+    type: 'arrow' | 'fireball' | 'ice' | 'lightning';
+    damage: number;
+    speed: number;
+    splash?: number;
+    chain?: number;
+    chainHits?: number;
+}
+
+interface TdParticle {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    life: number;
+    maxLife: number;
+    color: string;
+    size: number;
+}
+
+const TD_COLS: number = 15;
+const TD_ROWS: number = 12;
+const TD_CELL_SIZE: number = 40;
+const TD_WIDTH: number = TD_COLS * TD_CELL_SIZE;
+const TD_HEIGHT: number = TD_ROWS * TD_CELL_SIZE;
+
+const TD_TOWER_DATA: Record<TdTower['type'], { name: string; cost: number; range: number; damage: number; cooldown: number; color: string; desc: string }> = {
+    archer: { name: 'Bogenschütze', cost: 50, range: 120, damage: 12, cooldown: 25, color: '#28a745', desc: 'Schnell, Einzelziel' },
+    fire: { name: 'Feuer', cost: 120, range: 100, damage: 20, cooldown: 55, color: '#ff6600', desc: 'Flächenschaden' },
+    ice: { name: 'Eis', cost: 100, range: 110, damage: 6, cooldown: 40, color: '#00ccff', desc: 'Verlangsamt Gegner' },
+    lightning: { name: 'Blitz', cost: 175, range: 140, damage: 18, cooldown: 45, color: '#cc00ff', desc: 'Kettenblitz' }
+};
+
+const TD_WAVES: { count: number; interval: number; hp: number; speed: number; reward: number; type: TdEnemy['type']; color: string; radius: number }[] = [
+    { count: 6, interval: 900, hp: 30, speed: 1.2, reward: 8, type: 'normal', color: '#e74c3c', radius: 10 },
+    { count: 8, interval: 800, hp: 40, speed: 1.4, reward: 8, type: 'normal', color: '#e74c3c', radius: 10 },
+    { count: 10, interval: 700, hp: 35, speed: 2.2, reward: 10, type: 'fast', color: '#f1c40f', radius: 8 },
+    { count: 7, interval: 1000, hp: 90, speed: 0.9, reward: 14, type: 'tank', color: '#7f8c8d', radius: 13 },
+    { count: 12, interval: 650, hp: 55, speed: 1.8, reward: 11, type: 'fast', color: '#f1c40f', radius: 8 },
+    { count: 9, interval: 850, hp: 130, speed: 1.0, reward: 16, type: 'tank', color: '#7f8c8d', radius: 13 },
+    { count: 15, interval: 600, hp: 70, speed: 2.4, reward: 12, type: 'fast', color: '#f1c40f', radius: 8 },
+    { count: 1, interval: 1200, hp: 900, speed: 0.7, reward: 150, type: 'boss', color: '#8e44ad', radius: 18 },
+    { count: 18, interval: 550, hp: 110, speed: 1.9, reward: 13, type: 'normal', color: '#e74c3c', radius: 10 },
+    { count: 3, interval: 1500, hp: 700, speed: 0.8, reward: 120, type: 'boss', color: '#8e44ad', radius: 18 }
+];
+
+const TD_PATH: TdWaypoint[] = [
+    { c: 0, r: 1 }, { c: 3, r: 1 }, { c: 3, r: 5 }, { c: 7, r: 5 },
+    { c: 7, r: 2 }, { c: 11, r: 2 }, { c: 11, r: 8 }, { c: 5, r: 8 },
+    { c: 5, r: 10 }, { c: 14, r: 10 }
+];
+
+let tdCtx: CanvasRenderingContext2D | null = tdCanvas ? tdCanvas.getContext('2d') : null;
+let tdGold: number = 150;
+let tdLives: number = 20;
+let tdScore: number = 0;
+let tdWave: number = 0;
+let tdEnemies: TdEnemy[] = [];
+let tdTowers: TdTower[] = [];
+let tdProjectiles: TdProjectile[] = [];
+let tdParticles: TdParticle[] = [];
+let tdSelectedTower: TdTower['type'] = 'archer';
+let tdWaveActive: boolean = false;
+let tdWaveSpawned: number = 0;
+let tdWaveToSpawn: number = 0;
+let tdSpawnTimer: number = 0;
+let tdGameOver: boolean = false;
+let tdWon: boolean = false;
+let tdHoverCell: { c: number; r: number } | null = null;
+
+function initTowerDefense(): void {
+    if (tdInterval) clearInterval(tdInterval);
+    if (!tdCanvas || !tdCtx) return;
+
+    tdGold = 180;
+    tdLives = 20;
+    tdScore = 0;
+    tdWave = 0;
+    tdEnemies = [];
+    tdTowers = [];
+    tdProjectiles = [];
+    tdParticles = [];
+    tdSelectedTower = 'archer';
+    tdWaveActive = false;
+    tdWaveSpawned = 0;
+    tdWaveToSpawn = 0;
+    tdSpawnTimer = 0;
+    tdGameOver = false;
+    tdWon = false;
+
+    updateTdUi();
+    drawTd();
+
+    tdInterval = setInterval(() => {
+        updateTowerDefense();
+        drawTd();
+    }, 16);
+}
+
+function updateTowerDefense(): void {
+    if (tdGameOver || tdWon) return;
+
+    if (tdWaveActive && tdWaveSpawned < tdWaveToSpawn) {
+        tdSpawnTimer -= 16;
+        if (tdSpawnTimer <= 0) {
+            const wave = TD_WAVES[tdWave - 1];
+            spawnTdEnemy(wave);
+            tdWaveSpawned++;
+            tdSpawnTimer = wave.interval;
+        }
+    }
+
+    if (tdWaveActive && tdWaveSpawned >= tdWaveToSpawn && tdEnemies.length === 0) {
+        tdWaveActive = false;
+        if (tdWave >= TD_WAVES.length) {
+            tdWon = true;
+            updateTdUi();
+            return;
+        }
+        updateTdUi();
+    }
+
+    for (let i = tdEnemies.length - 1; i >= 0; i--) {
+        const enemy = tdEnemies[i];
+        updateTdEnemy(enemy);
+        if (enemy.hp <= 0) {
+            tdGold += enemy.reward;
+            tdScore += enemy.reward * 10;
+            spawnTdParticles(enemy.x, enemy.y, enemy.color, 8);
+            tdEnemies.splice(i, 1);
+            updateTdUi();
+        } else if (enemy.pathIndex >= TD_PATH.length) {
+            tdLives--;
+            tdEnemies.splice(i, 1);
+            updateTdUi();
+            if (tdLives <= 0) {
+                tdGameOver = true;
+                updateTdUi();
+                return;
+            }
+        }
+    }
+
+    for (const tower of tdTowers) {
+        if (tower.cooldown > 0) tower.cooldown--;
+        if (tower.cooldown <= 0) {
+            const target = findTdTarget(tower);
+            if (target) {
+                shootTdProjectile(tower, target);
+                tower.cooldown = tower.maxCooldown;
+            }
+        }
+    }
+
+    for (let i = tdProjectiles.length - 1; i >= 0; i--) {
+        const proj = tdProjectiles[i];
+        if (tdEnemies.indexOf(proj.target) === -1 || proj.target.hp <= 0) {
+            tdProjectiles.splice(i, 1);
+            continue;
+        }
+        const dx = proj.target.x - proj.x;
+        const dy = proj.target.y - proj.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= proj.speed) {
+            hitTdEnemy(proj.target, proj);
+            tdProjectiles.splice(i, 1);
+        } else {
+            proj.x += (dx / dist) * proj.speed;
+            proj.y += (dy / dist) * proj.speed;
+        }
+    }
+
+    for (let i = tdParticles.length - 1; i >= 0; i--) {
+        const p = tdParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        if (p.life <= 0) tdParticles.splice(i, 1);
+    }
+}
+
+function spawnTdEnemy(wave: typeof TD_WAVES[0]): void {
+    const start = TD_PATH[0];
+    tdEnemies.push({
+        x: start.c * TD_CELL_SIZE + TD_CELL_SIZE / 2,
+        y: start.r * TD_CELL_SIZE + TD_CELL_SIZE / 2,
+        hp: wave.hp,
+        maxHp: wave.hp,
+        speed: wave.speed,
+        baseSpeed: wave.speed,
+        reward: wave.reward,
+        pathIndex: 0,
+        radius: wave.radius,
+        color: wave.color,
+        frozen: 0,
+        poison: 0,
+        poisonTimer: 0,
+        type: wave.type
+    });
+}
+
+function updateTdEnemy(enemy: TdEnemy): void {
+    if (enemy.frozen > 0) {
+        enemy.frozen--;
+        enemy.speed = enemy.baseSpeed * 0.5;
+    } else {
+        enemy.speed = enemy.baseSpeed;
+    }
+
+    if (enemy.poison > 0) {
+        enemy.poisonTimer--;
+        if (enemy.poisonTimer <= 0) {
+            enemy.hp -= enemy.poison;
+            enemy.poisonTimer = 30;
+            spawnTdParticles(enemy.x, enemy.y, '#00ff00', 2);
+        }
+        enemy.poison--;
+    }
+
+    const target = TD_PATH[Math.min(enemy.pathIndex + 1, TD_PATH.length - 1)];
+    const tx = target.c * TD_CELL_SIZE + TD_CELL_SIZE / 2;
+    const ty = target.r * TD_CELL_SIZE + TD_CELL_SIZE / 2;
+    const dx = tx - enemy.x;
+    const dy = ty - enemy.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist <= enemy.speed) {
+        enemy.x = tx;
+        enemy.y = ty;
+        enemy.pathIndex++;
+    } else {
+        enemy.x += (dx / dist) * enemy.speed;
+        enemy.y += (dy / dist) * enemy.speed;
+    }
+}
+
+function findTdTarget(tower: TdTower): TdEnemy | null {
+    const tx = tower.c * TD_CELL_SIZE + TD_CELL_SIZE / 2;
+    const ty = tower.r * TD_CELL_SIZE + TD_CELL_SIZE / 2;
+    let best: TdEnemy | null = null;
+    let bestProgress = -1;
+    for (const enemy of tdEnemies) {
+        const dist = Math.hypot(enemy.x - tx, enemy.y - ty);
+        if (dist <= tower.range) {
+            const progress = enemy.pathIndex * 1000 + Math.hypot(enemy.x - tx, enemy.y - ty);
+            if (progress > bestProgress) {
+                bestProgress = progress;
+                best = enemy;
+            }
+        }
+    }
+    return best;
+}
+
+function shootTdProjectile(tower: TdTower, target: TdEnemy): void {
+    const tx = tower.c * TD_CELL_SIZE + TD_CELL_SIZE / 2;
+    const ty = tower.r * TD_CELL_SIZE + TD_CELL_SIZE / 2;
+    const type = tower.type === 'archer' ? 'arrow' : tower.type === 'fire' ? 'fireball' : tower.type;
+    tdProjectiles.push({
+        x: tx,
+        y: ty,
+        target,
+        type,
+        damage: tower.damage,
+        speed: type === 'lightning' ? 15 : 8,
+        splash: tower.type === 'fire' ? 60 : undefined,
+        chain: tower.type === 'lightning' ? 3 : undefined,
+        chainHits: 0
+    });
+}
+
+function hitTdEnemy(enemy: TdEnemy, proj: TdProjectile): void {
+    if (proj.type === 'fireball' && proj.splash) {
+        for (const e of tdEnemies) {
+            const dist = Math.hypot(e.x - enemy.x, e.y - enemy.y);
+            if (dist <= proj.splash) {
+                e.hp -= Math.round(proj.damage * (1 - dist / proj.splash));
+                if (e !== enemy) spawnTdParticles(e.x, e.y, '#ff6600', 3);
+            }
+        }
+        spawnTdParticles(enemy.x, enemy.y, '#ff6600', 12);
+    } else if (proj.type === 'ice') {
+        enemy.hp -= proj.damage;
+        enemy.frozen = 60;
+        spawnTdParticles(enemy.x, enemy.y, '#00ccff', 6);
+    } else if (proj.type === 'lightning') {
+        chainTdLightning(enemy, proj);
+    } else {
+        enemy.hp -= proj.damage;
+        spawnTdParticles(enemy.x, enemy.y, '#ffff00', 4);
+    }
+}
+
+function chainTdLightning(first: TdEnemy, proj: TdProjectile): void {
+    let current: TdEnemy | null = first;
+    const hit: Set<TdEnemy> = new Set();
+    let damage = proj.damage;
+    while (current && proj.chain && hit.size < proj.chain) {
+        current.hp -= damage;
+        hit.add(current);
+        spawnTdParticles(current.x, current.y, '#cc00ff', 5);
+        damage = Math.round(damage * 0.7);
+        let next: TdEnemy | null = null;
+        let bestDist = 100;
+        for (const e of tdEnemies) {
+            if (!hit.has(e)) {
+                const dist = Math.hypot(e.x - current!.x, e.y - current!.y);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    next = e;
+                }
+            }
+        }
+        current = next;
+    }
+}
+
+function spawnTdParticles(x: number, y: number, color: string, count: number): void {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.5 + Math.random() * 1.5;
+        tdParticles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 20 + Math.floor(Math.random() * 20),
+            maxLife: 40,
+            color,
+            size: 2 + Math.random() * 3
+        });
+    }
+}
+
+function drawTd(): void {
+    if (!tdCtx || !tdCanvas) return;
+
+    tdCtx.fillStyle = '#1a2a1a';
+    tdCtx.fillRect(0, 0, TD_WIDTH, TD_HEIGHT);
+
+    tdCtx.strokeStyle = 'rgba(255,255,255,0.05)';
+    tdCtx.lineWidth = 1;
+    for (let c = 0; c <= TD_COLS; c++) {
+        tdCtx.beginPath();
+        tdCtx.moveTo(c * TD_CELL_SIZE, 0);
+        tdCtx.lineTo(c * TD_CELL_SIZE, TD_HEIGHT);
+        tdCtx.stroke();
+    }
+    for (let r = 0; r <= TD_ROWS; r++) {
+        tdCtx.beginPath();
+        tdCtx.moveTo(0, r * TD_CELL_SIZE);
+        tdCtx.lineTo(TD_WIDTH, r * TD_CELL_SIZE);
+        tdCtx.stroke();
+    }
+
+    tdCtx.fillStyle = 'rgba(139, 90, 43, 0.6)';
+    for (let i = 0; i < TD_PATH.length; i++) {
+        const wp = TD_PATH[i];
+        tdCtx.fillRect(wp.c * TD_CELL_SIZE, wp.r * TD_CELL_SIZE, TD_CELL_SIZE, TD_CELL_SIZE);
+        if (i < TD_PATH.length - 1) {
+            const next = TD_PATH[i + 1];
+            const minC = Math.min(wp.c, next.c);
+            const maxC = Math.max(wp.c, next.c);
+            const minR = Math.min(wp.r, next.r);
+            const maxR = Math.max(wp.r, next.r);
+            for (let c = minC; c <= maxC; c++) {
+                for (let r = minR; r <= maxR; r++) {
+                    tdCtx.fillRect(c * TD_CELL_SIZE, r * TD_CELL_SIZE, TD_CELL_SIZE, TD_CELL_SIZE);
+                }
+            }
+        }
+    }
+
+    if (TD_PATH.length > 0) {
+        const start = TD_PATH[0];
+        const end = TD_PATH[TD_PATH.length - 1];
+        tdCtx.fillStyle = '#2ecc71';
+        tdCtx.font = '14px sans-serif';
+        tdCtx.textAlign = 'center';
+        tdCtx.fillText('START', start.c * TD_CELL_SIZE + TD_CELL_SIZE / 2, start.r * TD_CELL_SIZE + TD_CELL_SIZE / 2 + 5);
+        tdCtx.fillStyle = '#e74c3c';
+        tdCtx.fillText('END', end.c * TD_CELL_SIZE + TD_CELL_SIZE / 2, end.r * TD_CELL_SIZE + TD_CELL_SIZE / 2 + 5);
+    }
+
+    if (tdHoverCell && !tdGameOver && !tdWon) {
+        const data = TD_TOWER_DATA[tdSelectedTower];
+        const cx = tdHoverCell.c * TD_CELL_SIZE + TD_CELL_SIZE / 2;
+        const cy = tdHoverCell.r * TD_CELL_SIZE + TD_CELL_SIZE / 2;
+        const canPlace = canPlaceTower(tdHoverCell.c, tdHoverCell.r) && tdGold >= data.cost;
+        tdCtx.fillStyle = canPlace ? 'rgba(40, 167, 69, 0.3)' : 'rgba(231, 76, 60, 0.3)';
+        tdCtx.fillRect(tdHoverCell.c * TD_CELL_SIZE, tdHoverCell.r * TD_CELL_SIZE, TD_CELL_SIZE, TD_CELL_SIZE);
+        tdCtx.strokeStyle = canPlace ? '#28a745' : '#e74c3c';
+        tdCtx.beginPath();
+        tdCtx.arc(cx, cy, data.range, 0, Math.PI * 2);
+        tdCtx.stroke();
+    }
+
+    for (const tower of tdTowers) {
+        drawTdTower(tower);
+    }
+
+    for (const enemy of tdEnemies) {
+        drawTdEnemy(enemy);
+    }
+
+    for (const proj of tdProjectiles) {
+        tdCtx.fillStyle = proj.type === 'arrow' ? '#ffff00' : proj.type === 'fireball' ? '#ff6600' : proj.type === 'ice' ? '#00ccff' : '#cc00ff';
+        tdCtx.beginPath();
+        tdCtx.arc(proj.x, proj.y, proj.type === 'arrow' ? 3 : 5, 0, Math.PI * 2);
+        tdCtx.fill();
+    }
+
+    for (const p of tdParticles) {
+        tdCtx.globalAlpha = p.life / p.maxLife;
+        tdCtx.fillStyle = p.color;
+        tdCtx.beginPath();
+        tdCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        tdCtx.fill();
+    }
+    tdCtx.globalAlpha = 1;
+
+    if (tdGameOver || tdWon) {
+        tdCtx.fillStyle = 'rgba(0,0,0,0.7)';
+        tdCtx.fillRect(0, 0, TD_WIDTH, TD_HEIGHT);
+        tdCtx.fillStyle = tdWon ? '#2ecc71' : '#e74c3c';
+        tdCtx.font = 'bold 36px sans-serif';
+        tdCtx.textAlign = 'center';
+        tdCtx.fillText(tdWon ? 'SIEG!' : 'GAME OVER', TD_WIDTH / 2, TD_HEIGHT / 2);
+        tdCtx.font = '18px sans-serif';
+        tdCtx.fillStyle = '#fff';
+        tdCtx.fillText(`Punkte: ${tdScore}`, TD_WIDTH / 2, TD_HEIGHT / 2 + 30);
+    }
+}
+
+function drawTdTower(tower: TdTower): void {
+    if (!tdCtx) return;
+    const x = tower.c * TD_CELL_SIZE;
+    const y = tower.r * TD_CELL_SIZE;
+    const data = TD_TOWER_DATA[tower.type];
+
+    tdCtx.fillStyle = data.color;
+    tdCtx.fillRect(x + 4, y + 4, TD_CELL_SIZE - 8, TD_CELL_SIZE - 8);
+    tdCtx.strokeStyle = '#fff';
+    tdCtx.lineWidth = 2;
+    tdCtx.strokeRect(x + 4, y + 4, TD_CELL_SIZE - 8, TD_CELL_SIZE - 8);
+
+    tdCtx.fillStyle = '#fff';
+    for (let i = 0; i < tower.level; i++) {
+        tdCtx.beginPath();
+        tdCtx.arc(x + 10 + i * 8, y + 10, 2, 0, Math.PI * 2);
+        tdCtx.fill();
+    }
+
+    tdCtx.fillStyle = '#fff';
+    tdCtx.font = 'bold 16px sans-serif';
+    tdCtx.textAlign = 'center';
+    let symbol = 'A';
+    if (tower.type === 'fire') symbol = 'F';
+    if (tower.type === 'ice') symbol = 'I';
+    if (tower.type === 'lightning') symbol = 'L';
+    tdCtx.fillText(symbol, x + TD_CELL_SIZE / 2, y + TD_CELL_SIZE / 2 + 6);
+}
+
+function drawTdEnemy(enemy: TdEnemy): void {
+    if (!tdCtx) return;
+    tdCtx.fillStyle = enemy.color;
+    tdCtx.beginPath();
+    tdCtx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+    tdCtx.fill();
+    tdCtx.strokeStyle = '#000';
+    tdCtx.lineWidth = 1;
+    tdCtx.stroke();
+
+    const barW = enemy.radius * 2;
+    const barH = 4;
+    const hpPct = Math.max(0, enemy.hp / enemy.maxHp);
+    tdCtx.fillStyle = '#000';
+    tdCtx.fillRect(enemy.x - barW / 2, enemy.y - enemy.radius - 8, barW, barH);
+    tdCtx.fillStyle = hpPct > 0.5 ? '#2ecc71' : hpPct > 0.25 ? '#f1c40f' : '#e74c3c';
+    tdCtx.fillRect(enemy.x - barW / 2, enemy.y - enemy.radius - 8, barW * hpPct, barH);
+
+    if (enemy.frozen > 0) {
+        tdCtx.strokeStyle = '#00ccff';
+        tdCtx.beginPath();
+        tdCtx.arc(enemy.x, enemy.y, enemy.radius + 4, 0, Math.PI * 2);
+        tdCtx.stroke();
+    }
+}
+
+function isTdPathCell(c: number, r: number): boolean {
+    for (let i = 0; i < TD_PATH.length - 1; i++) {
+        const a = TD_PATH[i];
+        const b = TD_PATH[i + 1];
+        const minC = Math.min(a.c, b.c);
+        const maxC = Math.max(a.c, b.c);
+        const minR = Math.min(a.r, b.r);
+        const maxR = Math.max(a.r, b.r);
+        if (c >= minC && c <= maxC && r >= minR && r <= maxR) return true;
+    }
+    return false;
+}
+
+function canPlaceTower(c: number, r: number): boolean {
+    if (c < 0 || c >= TD_COLS || r < 0 || r >= TD_ROWS) return false;
+    if (isTdPathCell(c, r)) return false;
+    for (const tower of tdTowers) {
+        if (tower.c === c && tower.r === r) return false;
+    }
+    return true;
+}
+
+function handleTdClick(e: MouseEvent): void {
+    if (tdGameOver || tdWon || !tdCanvas) return;
+    const rect = tdCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const c = Math.floor(x / TD_CELL_SIZE);
+    const r = Math.floor(y / TD_CELL_SIZE);
+    if (canPlaceTower(c, r)) {
+        const data = TD_TOWER_DATA[tdSelectedTower];
+        if (tdGold >= data.cost) {
+            tdGold -= data.cost;
+            tdTowers.push({
+                c, r,
+                type: tdSelectedTower,
+                level: 1,
+                cooldown: 0,
+                maxCooldown: data.cooldown,
+                range: data.range,
+                damage: data.damage
+            });
+            updateTdUi();
+        }
+    }
+}
+
+function handleTdMouseMove(e: MouseEvent): void {
+    if (!tdCanvas) return;
+    const rect = tdCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const c = Math.floor(x / TD_CELL_SIZE);
+    const r = Math.floor(y / TD_CELL_SIZE);
+    if (c >= 0 && c < TD_COLS && r >= 0 && r < TD_ROWS) {
+        tdHoverCell = { c, r };
+    } else {
+        tdHoverCell = null;
+    }
+}
+
+function startNextTdWave(): void {
+    if (tdWaveActive || tdGameOver || tdWon) return;
+    if (tdWave < TD_WAVES.length) {
+        tdWave++;
+        tdWaveActive = true;
+        tdWaveSpawned = 0;
+        tdWaveToSpawn = TD_WAVES[tdWave - 1].count;
+        tdSpawnTimer = 0;
+        updateTdUi();
+    }
+}
+
+function updateTdUi(): void {
+    if (tdGoldDisplay) tdGoldDisplay.textContent = String(tdGold);
+    if (tdLivesDisplay) tdLivesDisplay.textContent = String(tdLives);
+    if (tdWaveDisplay) tdWaveDisplay.textContent = `${tdWave}/${TD_WAVES.length}`;
+    if (tdScoreDisplay) tdScoreDisplay.textContent = String(tdScore);
+    if (tdStatus) {
+        if (tdWon) {
+            tdStatus.textContent = `🎉 Sieg! Punkte: ${tdScore}`;
+        } else if (tdGameOver) {
+            tdStatus.textContent = '💀 Game Over!';
+        } else if (tdWaveActive) {
+            tdStatus.textContent = `Welle ${tdWave} läuft...`;
+        } else if (tdWave >= TD_WAVES.length) {
+            tdStatus.textContent = 'Alle Wellen geschafft!';
+        } else {
+            tdStatus.textContent = 'Baue Türme und starte die nächste Welle!';
+        }
+    }
+    if (tdNextWaveBtn) {
+        tdNextWaveBtn.disabled = tdWaveActive || tdGameOver || tdWon || tdWave >= TD_WAVES.length;
+    }
+}
+
+function setupTdTowerButtons(): void {
+    const types: TdTower['type'][] = ['archer', 'fire', 'ice', 'lightning'];
+    for (const type of types) {
+        const btn = document.getElementById(`tdTower${type.charAt(0).toUpperCase() + type.slice(1)}`);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                tdSelectedTower = type;
+                document.querySelectorAll('.td-tower-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+            });
+        }
+    }
+}
+
+if (tdCanvas) {
+    tdCanvas.addEventListener('click', handleTdClick);
+    tdCanvas.addEventListener('mousemove', handleTdMouseMove);
+    tdCanvas.addEventListener('mouseleave', () => { tdHoverCell = null; });
+}
+if (resetTdBtn) resetTdBtn.addEventListener('click', initTowerDefense);
+if (tdNextWaveBtn) tdNextWaveBtn.addEventListener('click', startNextTdWave);
+setupTdTowerButtons();
 
 // =============================================
 // Global Keyboard Handler

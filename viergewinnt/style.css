@@ -587,3 +587,126 @@ button:hover {
     border: 2px solid #b8860b;
     box-shadow: 0 0 15px rgba(184, 134, 11, 0.3);
 }
+
+/* =============================================
+   Tower Defense
+   ============================================= */
+
+#tdContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100%;
+}
+
+.td-controls {
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.td-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.td-stat {
+    background: #f8f9fa;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+#tdCanvas {
+    background: #1a2a1a;
+    display: block;
+    border: 4px solid #2c3e50;
+    border-radius: 8px;
+    margin: 0 auto;
+    cursor: crosshair;
+}
+
+.td-game-area {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+.td-tower-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.td-tower-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 12px;
+    min-width: 100px;
+    background-color: #fff;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    color: #333;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.td-tower-btn:hover {
+    transform: translateY(-2px);
+    border-color: #007bff;
+}
+
+.td-tower-btn.selected {
+    border-color: #007bff;
+    background-color: #e7f1ff;
+    box-shadow: 0 0 12px rgba(0, 123, 255, 0.3);
+}
+
+.td-tower-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: white;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.td-tower-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.td-tower-cost {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+#tdNextWaveBtn {
+    background-color: #28a745;
+}
+
+#tdNextWaveBtn:hover:not(:disabled) {
+    background-color: #218838;
+}
+
+#tdNextWaveBtn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+.td-hint {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 12px;
+    max-width: 600px;
+}
