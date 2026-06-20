@@ -45,6 +45,10 @@
                 <span class="btn-icon">🏰</span>
                 <span class="btn-label">Verteidigung</span>
             </button>
+            <button id="btnPacman" class="game-grid-btn" data-game="pacman">
+                <span class="btn-icon">🟡</span>
+                <span class="btn-label">Pac-Man</span>
+            </button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -285,6 +289,29 @@
                     <canvas id="tdCanvas" width="600" height="500"></canvas>
                 </div>
                 <p class="td-hint">Klicke auf ein freies Feld, um einen Turm zu platzieren. Türme können nicht auf den Weg gesetzt werden.</p>
+            </div>
+        </div>
+
+        <div id="pacmanContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Pac-Man</h1>
+                <div class="controls">
+                    <button id="resetPacmanBtn">Neues Spiel</button>
+                </div>
+                <div id="pacmanStatus">Punkte: 0 | Leben: 3</div>
+                <div class="pacman-game-area">
+                    <canvas id="pacmanCanvas" width="448" height="496"></canvas>
+                </div>
+                <div class="pacman-mobile-controls">
+                    <div class="pacman-controls-row">
+                        <button id="pacmanBtnUp" class="pacman-ctrl-btn">▲</button>
+                    </div>
+                    <div class="pacman-controls-row">
+                        <button id="pacmanBtnLeft" class="pacman-ctrl-btn">◀</button>
+                        <button id="pacmanBtnDown" class="pacman-ctrl-btn">▼</button>
+                        <button id="pacmanBtnRight" class="pacman-ctrl-btn">▶</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
