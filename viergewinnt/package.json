@@ -1,17 +1,19 @@
 {
   "name": "viergewinnt",
   "version": "1.0.0",
-  "description": "",
+  "description": "Spielhalle - Game collection with 10 classic games",
   "main": "script.js",
   "scripts": {
-    "build": "npx tsc",
-    "watch": "npx tsc --watch"
+    "build": "npx tsc --noEmit && npx esbuild src/main.ts --bundle --outfile=script.js --sourcemap --target=es6",
+    "watch": "npx esbuild src/main.ts --bundle --outfile=script.js --sourcemap --target=es6 --watch",
+    "typecheck": "npx tsc --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "esbuild": "^0.25.0"
   }
 }
