@@ -10,6 +10,7 @@ import { BoulderDashGame } from './games/BoulderDashGame';
 import { TowerDefenseGame } from './games/TowerDefenseGame';
 import { PacmanGame } from './games/PacmanGame';
 import { MahjongGame } from './games/MahjongGame';
+import { KatakisGame } from './games/KatakisGame';
 
 export class GameRegistry {
     private games: Map<GameId, Game>;
@@ -28,6 +29,7 @@ export class GameRegistry {
             ['towerDefense', new TowerDefenseGame()],
             ['pacman', new PacmanGame()],
             ['mahjong', new MahjongGame()],
+            ['katakis', new KatakisGame()],
         ]);
 
         this.setupGameSwitching();
@@ -43,7 +45,7 @@ export class GameRegistry {
         const gameIds: GameId[] = [
             'fourWins', 'minesweeper', 'tetris', 'snake', 'pong',
             'spaceInvaders', 'breakout', 'boulderDash', 'towerDefense', 'pacman',
-            'mahjong'
+            'mahjong', 'katakis'
         ];
 
         for (const gameId of gameIds) {
@@ -66,7 +68,8 @@ export class GameRegistry {
             'boulderDash': 'BoulderDash',
             'towerDefense': 'TowerDefense',
             'pacman': 'Pacman',
-            'mahjong': 'Mahjong'
+            'mahjong': 'Mahjong',
+            'katakis': 'Katakis'
         };
         return map[gameId];
     }
@@ -83,7 +86,8 @@ export class GameRegistry {
             'boulderDash': 'boulderDashContainer',
             'towerDefense': 'tdContainer',
             'pacman': 'pacmanContainer',
-            'mahjong': 'mahjongContainer'
+            'mahjong': 'mahjongContainer',
+            'katakis': 'katakisContainer'
         };
         return map[gameId];
     }
@@ -100,7 +104,8 @@ export class GameRegistry {
             'boulderDash': 'btnBoulderDash',
             'towerDefense': 'btnTowerDefense',
             'pacman': 'btnPacman',
-            'mahjong': 'btnMahjong'
+            'mahjong': 'btnMahjong',
+            'katakis': 'btnKatakis'
         };
         return map[gameId];
     }
@@ -174,6 +179,9 @@ export class GameRegistry {
                 case 'pacman':
                     (this.getActiveGame() as PacmanGame).handleKey(e);
                     break;
+                case 'katakis':
+                    (this.getActiveGame() as KatakisGame).handleKeyDown(e);
+                    break;
             }
         });
 
@@ -193,6 +201,9 @@ export class GameRegistry {
                     break;
                 case 'breakout':
                     (this.getActiveGame() as BreakoutGame).handleKeyUp(e);
+                    break;
+                case 'katakis':
+                    (this.getActiveGame() as KatakisGame).handleKeyUp(e);
                     break;
             }
         });

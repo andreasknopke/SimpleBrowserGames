@@ -53,6 +53,10 @@
                 <span class="btn-icon">🀄</span>
                 <span class="btn-label">Mahjong</span>
             </button>
+            <button id="btnKatakis" class="game-grid-btn" data-game="katakis">
+                <span class="btn-icon">🚀</span>
+                <span class="btn-label">Katakis</span>
+            </button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -331,6 +335,36 @@
                 <div class="mahjong-game-area">
                     <canvas id="mahjongCanvas" width="900" height="580"></canvas>
                 </div>
+            </div>
+        </div>
+
+        <div id="katakisContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Katakis</h1>
+                <div class="controls">
+                    <button id="resetKatakisBtn">Neues Spiel</button>
+                </div>
+                <div id="katakisStatus">❤️ ♥♥♥♥♥ | Leben: 🛸🛸🛸 | Punkte: 0 | Level 1/4</div>
+                <div class="katakis-game-area">
+                    <canvas id="katakisCanvas" width="640" height="400"></canvas>
+                </div>
+                <div class="katakis-mobile-controls">
+                    <div class="katakis-controls-row">
+                        <button id="katakisBtnUp" class="katakis-ctrl-btn">▲</button>
+                    </div>
+                    <div class="katakis-controls-row">
+                        <button id="katakisBtnLeft" class="katakis-ctrl-btn">◀</button>
+                        <button id="katakisBtnShoot" class="katakis-ctrl-btn katakis-fire-btn">🔥</button>
+                        <button id="katakisBtnRight" class="katakis-ctrl-btn">▶</button>
+                    </div>
+                    <div class="katakis-controls-row">
+                        <button id="katakisBtnDown" class="katakis-ctrl-btn">▼</button>
+                    </div>
+                    <div class="katakis-controls-row katakis-force-row">
+                        <button id="katakisBtnForce" class="katakis-ctrl-btn katakis-force-btn">🔵 Force (F)</button>
+                    </div>
+                </div>
+                <p class="katakis-hint">Pfeiltasten / WASD: Bewegen | Leertaste: Schießen | F: Force-Modul umschalten</p>
             </div>
         </div>
     </div>

@@ -823,3 +823,93 @@ button:hover {
 #mahjongShuffleBtn:hover {
     background-color: #d35400;
 }
+
+/* =============================================
+   Katakis
+   ============================================= */
+
+#katakisCanvas {
+    background: #0a0a1a;
+    display: block;
+    border: 4px solid #4a9eff;
+    border-radius: 8px;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+    max-width: 100%;
+}
+
+.katakis-game-area {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+#katakisContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100%;
+}
+
+.katakis-mobile-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+}
+
+.katakis-controls-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.katakis-ctrl-btn {
+    padding: 14px 22px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 12px;
+    background-color: #444;
+    color: white;
+    transition: background-color 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    min-width: 70px;
+}
+
+.katakis-ctrl-btn:active {
+    background-color: #4a9eff;
+    transform: scale(0.95);
+}
+
+.katakis-fire-btn {
+    background-color: #e74c3c;
+}
+
+.katakis-fire-btn:active {
+    background-color: #ff6b5a !important;
+}
+
+.katakis-force-btn {
+    background-color: #2980b9;
+    min-width: 140px;
+}
+
+.katakis-force-btn:active {
+    background-color: #4a9eff !important;
+}
+
+.katakis-force-row {
+    margin-top: 4px;
+}
+
+.katakis-hint {
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 10px;
+    max-width: 600px;
+}
