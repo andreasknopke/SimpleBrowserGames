@@ -9,6 +9,7 @@ import { BreakoutGame } from './games/BreakoutGame';
 import { BoulderDashGame } from './games/BoulderDashGame';
 import { TowerDefenseGame } from './games/TowerDefenseGame';
 import { PacmanGame } from './games/PacmanGame';
+import { MahjongGame } from './games/MahjongGame';
 
 export class GameRegistry {
     private games: Map<GameId, Game>;
@@ -26,6 +27,7 @@ export class GameRegistry {
             ['boulderDash', new BoulderDashGame()],
             ['towerDefense', new TowerDefenseGame()],
             ['pacman', new PacmanGame()],
+            ['mahjong', new MahjongGame()],
         ]);
 
         this.setupGameSwitching();
@@ -40,7 +42,8 @@ export class GameRegistry {
     private setupGameSwitching(): void {
         const gameIds: GameId[] = [
             'fourWins', 'minesweeper', 'tetris', 'snake', 'pong',
-            'spaceInvaders', 'breakout', 'boulderDash', 'towerDefense', 'pacman'
+            'spaceInvaders', 'breakout', 'boulderDash', 'towerDefense', 'pacman',
+            'mahjong'
         ];
 
         for (const gameId of gameIds) {
@@ -62,7 +65,8 @@ export class GameRegistry {
             'breakout': 'Breakout',
             'boulderDash': 'BoulderDash',
             'towerDefense': 'TowerDefense',
-            'pacman': 'Pacman'
+            'pacman': 'Pacman',
+            'mahjong': 'Mahjong'
         };
         return map[gameId];
     }
@@ -78,7 +82,8 @@ export class GameRegistry {
             'breakout': 'breakoutContainer',
             'boulderDash': 'boulderDashContainer',
             'towerDefense': 'tdContainer',
-            'pacman': 'pacmanContainer'
+            'pacman': 'pacmanContainer',
+            'mahjong': 'mahjongContainer'
         };
         return map[gameId];
     }
@@ -94,7 +99,8 @@ export class GameRegistry {
             'breakout': 'btnBreakout',
             'boulderDash': 'btnBoulderDash',
             'towerDefense': 'btnTowerDefense',
-            'pacman': 'btnPacman'
+            'pacman': 'btnPacman',
+            'mahjong': 'btnMahjong'
         };
         return map[gameId];
     }

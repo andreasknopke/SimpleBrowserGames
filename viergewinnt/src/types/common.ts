@@ -6,7 +6,7 @@ export type Player = 1 | 2;
 export type CellValue = 0 | Player;
 export type Board = CellValue[][];
 export type GameMode = '1p' | '2p';
-export type GameId = 'fourWins' | 'minesweeper' | 'tetris' | 'snake' | 'pong' | 'spaceInvaders' | 'breakout' | 'boulderDash' | 'towerDefense' | 'pacman';
+export type GameId = 'fourWins' | 'minesweeper' | 'tetris' | 'snake' | 'pong' | 'spaceInvaders' | 'breakout' | 'boulderDash' | 'towerDefense' | 'pacman' | 'mahjong';
 
 export type MsCellValue = number | 'M';
 export type MsBoard = MsCellValue[][];

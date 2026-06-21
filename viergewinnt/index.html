@@ -49,6 +49,10 @@
                 <span class="btn-icon">🟡</span>
                 <span class="btn-label">Pac-Man</span>
             </button>
+            <button id="btnMahjong" class="game-grid-btn" data-game="mahjong">
+                <span class="btn-icon">🀄</span>
+                <span class="btn-label">Mahjong</span>
+            </button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -311,6 +315,21 @@
                         <button id="pacmanBtnDown" class="pacman-ctrl-btn">▼</button>
                         <button id="pacmanBtnRight" class="pacman-ctrl-btn">▶</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="mahjongContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Mahjong Solitaire</h1>
+                <div class="controls">
+                    <button id="resetMahjongBtn">Neues Spiel</button>
+                    <button id="mahjongHintBtn">💡 Hinweis</button>
+                    <button id="mahjongShuffleBtn">🔀 Mischen</button>
+                </div>
+                <div id="mahjongStatus">Paare: 0 / 72 | Zeit: 0s</div>
+                <div class="mahjong-game-area">
+                    <canvas id="mahjongCanvas" width="900" height="580"></canvas>
                 </div>
             </div>
         </div>
