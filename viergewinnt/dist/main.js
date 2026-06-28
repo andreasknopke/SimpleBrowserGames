@@ -1,9 +1,7 @@
 import { GameRegistry } from './GameRegistry';
-
-let registry: GameRegistry | null = null;
-
+let registry = null;
 document.addEventListener('DOMContentLoaded', () => {
     registry = new GameRegistry();
-    (window as any).__gameRegistry = registry;
     registry.initDefault();
 });
+//# sourceMappingURL=main.js.map

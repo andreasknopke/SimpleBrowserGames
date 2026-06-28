@@ -47,6 +47,11 @@
           this.difficultyContainer = null;
           this.difficultySelect = null;
           this.resetBtn = null;
+          // =============================================
+          // AI Implementation (Minimax + Alpha-Beta + Heuristik)
+          // =============================================
+          /** Transpositionstabelle – wird pro getBestMove-Aufruf neu angelegt. */
+          this.transpositionTable = /* @__PURE__ */ new Map();
           this.boardElement = document.getElementById("board");
           this.statusElement = document.getElementById("status");
           this.gameModeSelect = document.getElementById("gameMode");
@@ -163,23 +168,72 @@
           }
           return false;
         }
-        // =============================================
-        // AI Implementation (Minimax with Alpha-Beta Pruning)
-        // =============================================
+        /**
+         * Schwierigkeitsgrad → Suchtiefe.
+         *  1 = Leicht (Tiefe 2, mit Zufall)
+         *  2 = Mittel (Tiefe 4)
+         *  3 = Schwer (Tiefe 6)
+         *  4 = Extrem (Tiefe 8, mit Transpositionstabelle)
+         */
+        getSearchDepth() {
+          switch (this.difficulty) {
+            case 1:
+              return 2;
+            case 2:
+              return 4;
+            case 3:
+              return 6;
+            case 4:
+              return 8;
+            default:
+              return 4;
+          }
+        }
+        /**
+         * Gibt die beste Spalte zurück.
+         * Reihenfolge: Sofortgewinn → Block → Minimax.
+         */
         getBestMove() {
-          let bestScore = -Infinity;
-          let move = -1;
+          this.transpositionTable.clear();
           const availableCols = this.getAvailableCols(this.board);
+          if (availableCols.length === 0) return -1;
           for (const col of availableCols) {
             const tempBoard = this.board.map((row) => [...row]);
             this.makeMoveInBoard(tempBoard, col, this.PLAYER2);
-            const score = this.minimax(tempBoard, this.difficulty, -Infinity, Infinity, false);
+            if (this.checkWin(tempBoard, this.PLAYER2)) return col;
+          }
+          for (const col of availableCols) {
+            const tempBoard = this.board.map((row) => [...row]);
+            this.makeMoveInBoard(tempBoard, col, this.PLAYER1);
+            if (this.checkWin(tempBoard, this.PLAYER1)) return col;
+          }
+          const depth = this.getSearchDepth();
+          let bestScore = -Infinity;
+          let bestMoves = [];
+          const orderedCols = this.orderColumns(availableCols);
+          for (const col of orderedCols) {
+            const tempBoard = this.board.map((row) => [...row]);
+            this.makeMoveInBoard(tempBoard, col, this.PLAYER2);
+            const score = this.minimax(tempBoard, depth, -Infinity, Infinity, false);
             if (score > bestScore) {
               bestScore = score;
-              move = col;
+              bestMoves = [col];
+            } else if (score === bestScore) {
+              bestMoves.push(col);
             }
           }
-          return move;
+          if (this.difficulty === 1 && Math.random() < 0.4) {
+            return availableCols[Math.floor(Math.random() * availableCols.length)];
+          }
+          return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+        }
+        /**
+         * Spalten in der Reihenfolge „Mitte zuerst" sortieren –
+         * verbessert Alpha-Beta-Pruning drastisch.
+         */
+        orderColumns(cols) {
+          const centerDistances = [3, 2, 4, 1, 5, 0, 6];
+          return cols.sort((a, b) => centerDistances.indexOf(a) - centerDistances.indexOf(b));
         }
         getAvailableCols(board) {
           const available = [];
@@ -196,14 +250,25 @@
             }
           }
         }
+        /**
+         * Minimax mit Alpha-Beta-Pruning und Transpositionstabelle.
+         */
         minimax(board, depth, alpha, beta, isMaximizing) {
-          if (this.checkWin(board, this.PLAYER2)) return 1e4 + depth;
-          if (this.checkWin(board, this.PLAYER1)) return -1e4 - depth;
-          if (this.isBoardFull() || depth === 0) return this.evaluateBoard(board);
+          if (this.checkWin(board, this.PLAYER2)) return 1e5 + depth;
+          if (this.checkWin(board, this.PLAYER1)) return -1e5 - depth;
           const availableCols = this.getAvailableCols(board);
+          if (this.isBoardFull() || availableCols.length === 0 || depth === 0) {
+            return this.evaluateBoard(board);
+          }
+          if (this.transpositionTable.size > 0) {
+            const key = this.boardToKey(board);
+            const cached = this.transpositionTable.get(key);
+            if (cached !== void 0) return cached;
+          }
+          const orderedCols = this.orderColumns(availableCols);
           if (isMaximizing) {
             let maxEval = -Infinity;
-            for (const col of availableCols) {
+            for (const col of orderedCols) {
               const tempBoard = board.map((row) => [...row]);
               this.makeMoveInBoard(tempBoard, col, this.PLAYER2);
               const evaluation = this.minimax(tempBoard, depth - 1, alpha, beta, false);
@@ -211,10 +276,11 @@
               alpha = Math.max(alpha, evaluation);
               if (beta <= alpha) break;
             }
+            this.cacheBoard(board, maxEval);
             return maxEval;
           } else {
             let minEval = Infinity;
-            for (const col of availableCols) {
+            for (const col of orderedCols) {
               const tempBoard = board.map((row) => [...row]);
               this.makeMoveInBoard(tempBoard, col, this.PLAYER1);
               const evaluation = this.minimax(tempBoard, depth - 1, alpha, beta, true);
@@ -222,16 +288,81 @@
               beta = Math.min(beta, evaluation);
               if (beta <= alpha) break;
             }
+            this.cacheBoard(board, minEval);
             return minEval;
           }
         }
+        /** Board als String-Key für die Transpositionstabelle. */
+        boardToKey(board) {
+          return board.map((row) => row.join(",")).join("|");
+        }
+        /** Ergebnis im Cache speichern (nur bei Extrem-Schwer). */
+        cacheBoard(board, value) {
+          if (this.difficulty >= 4) {
+            const key = this.boardToKey(board);
+            if (!this.transpositionTable.has(key)) {
+              this.transpositionTable.set(key, value);
+            }
+          }
+        }
+        /**
+         * Window-basierte Heuristik.
+         * Bewertert alle 4er-Fenster (horizontal, vertikal, beide Diagonalen).
+         */
         evaluateBoard(board) {
           let score = 0;
           for (let r = 0; r < this.ROWS; r++) {
-            if (board[r][3] === this.PLAYER2) score += 3;
-            else if (board[r][3] === this.PLAYER1) score -= 3;
+            if (board[r][3] === this.PLAYER2) score += 4;
+            else if (board[r][3] === this.PLAYER1) score -= 4;
+          }
+          score += this.evaluateDirection(board, 0, 1);
+          score += this.evaluateDirection(board, 1, 0);
+          score += this.evaluateDirection(board, 1, 1);
+          score += this.evaluateDirection(board, -1, 1);
+          return score;
+        }
+        /**
+         * Bewertere alle 4er-Fenster in einer Richtung.
+         * @param dr  Zeilen-Inkrement
+         * @param dc  Spalten-Inkrement
+         */
+        evaluateDirection(board, dr, dc) {
+          let score = 0;
+          for (let r = 0; r < this.ROWS; r++) {
+            for (let c = 0; c < this.COLS; c++) {
+              const window2 = [];
+              let valid = true;
+              for (let i = 0; i < 4; i++) {
+                const nr = r + dr * i;
+                const nc = c + dc * i;
+                if (nr < 0 || nr >= this.ROWS || nc < 0 || nc >= this.COLS) {
+                  valid = false;
+                  break;
+                }
+                window2.push(board[nr][nc]);
+              }
+              if (!valid) continue;
+              score += this.evaluateWindow(window2);
+            }
           }
           return score;
+        }
+        /**
+         * Bewerte ein einzelnes 4er-Fenster.
+         * 4 eigene → +1 000 000
+         * 3 eigene + 1 leer → +50
+         * 2 eigene + 2 leer → +5
+         * 3 gegner + 1 leer → −80  (Defensivbias: Blocken priorisieren)
+         */
+        evaluateWindow(window2) {
+          const aiCount = window2.filter((v) => v === this.PLAYER2).length;
+          const oppCount = window2.filter((v) => v === this.PLAYER1).length;
+          const emptyCount = window2.filter((v) => v === 0).length;
+          if (aiCount === 4) return 1e6;
+          if (aiCount === 3 && emptyCount === 1) return 50;
+          if (aiCount === 2 && emptyCount === 2) return 5;
+          if (oppCount === 3 && emptyCount === 1) return -80;
+          return 0;
         }
       };
     }
@@ -1466,7 +1597,7 @@
   });
 
   // src/games/BoulderDashGame.ts
-  var BD_EMPTY_CHAR, BD_PLAYER_CHAR, BD_WALL_CHAR, BD_DIRT_CHAR, BD_BOULDER_CHAR, BD_DIAMOND_CHAR, BD_MAGIC_WALL_CHAR, BoulderDashGame;
+  var BD_EMPTY_CHAR, BD_PLAYER_CHAR, BD_WALL_CHAR, BD_DIRT_CHAR, BD_BOULDER_CHAR, BD_DIAMOND_CHAR, BD_EXIT_CHAR, BD_LEVELS, BD_TOTAL_LEVELS, BoulderDashGame;
   var init_BoulderDashGame = __esm({
     "src/games/BoulderDashGame.ts"() {
       "use strict";
@@ -1476,13 +1607,25 @@
       BD_DIRT_CHAR = 3;
       BD_BOULDER_CHAR = 4;
       BD_DIAMOND_CHAR = 5;
-      BD_MAGIC_WALL_CHAR = 6;
+      BD_EXIT_CHAR = 7;
+      BD_LEVELS = [
+        { name: "\u{1F3D5}\uFE0F First Dig", target: 3, wallBlocks: 2, boulderCount: 3, diamondCount: 8 },
+        { name: "\u{1F573}\uFE0F Wider Cavern", target: 5, wallBlocks: 4, boulderCount: 5, diamondCount: 10 },
+        { name: "\u{1FAA8} Rock Garden", target: 7, wallBlocks: 5, boulderCount: 8, diamondCount: 12 },
+        { name: "\u271D\uFE0F The Cross", target: 8, wallBlocks: 8, boulderCount: 10, diamondCount: 14 },
+        { name: "\u{1F300} Labyrinth", target: 10, wallBlocks: 10, boulderCount: 12, diamondCount: 15 },
+        { name: "\u{1F30A} Underground Lake", target: 10, wallBlocks: 10, boulderCount: 14, diamondCount: 16 },
+        { name: "\u{1F48E} Treasure Room", target: 12, wallBlocks: 11, boulderCount: 14, diamondCount: 18 },
+        { name: "\u{1F9F1} The Squeeze", target: 13, wallBlocks: 12, boulderCount: 16, diamondCount: 18 },
+        { name: "\u{1F480} Cavern of Doom", target: 15, wallBlocks: 14, boulderCount: 18, diamondCount: 20 },
+        { name: "\u{1F451} The Final Frontier", target: 18, wallBlocks: 16, boulderCount: 20, diamondCount: 24 }
+      ];
+      BD_TOTAL_LEVELS = BD_LEVELS.length;
       BoulderDashGame = class {
         constructor() {
           this.id = "boulderDash";
           this.BD_SIZE = 20;
           this.BD_CELL_SIZE = 20;
-          this.BD_TARGET_COLLECT = 10;
           this.board = [];
           this.playerX = 0;
           this.playerY = 0;
@@ -1491,9 +1634,18 @@
           this.collectedDiamonds = 0;
           this.gameOver = false;
           this.won = false;
+          this.currentLevelIndex = 0;
+          this.levelFinished = false;
+          this.exitRevealed = false;
+          this.exitX = 0;
+          this.exitY = 0;
           this.resetBdBtn = null;
           this.bdCanvas = null;
           this.bdStatusElement = null;
+          this.bdLevelDisplay = null;
+          this.bdLevelName = null;
+          this.bdPrevLevelBtn = null;
+          this.bdNextLevelBtn = null;
           this.bdBtnUp = null;
           this.bdBtnDown = null;
           this.bdBtnLeft = null;
@@ -1502,6 +1654,10 @@
           this.resetBdBtn = document.getElementById("resetBdBtn");
           this.bdCanvas = document.getElementById("bdCanvas");
           this.bdStatusElement = document.getElementById("bdStatus");
+          this.bdLevelDisplay = document.getElementById("bdLevelDisplay");
+          this.bdLevelName = document.getElementById("bdLevelName");
+          this.bdPrevLevelBtn = document.getElementById("bdPrevLevelBtn");
+          this.bdNextLevelBtn = document.getElementById("bdNextLevelBtn");
           this.bdBtnUp = document.getElementById("bdBtnUp");
           this.bdBtnDown = document.getElementById("bdBtnDown");
           this.bdBtnLeft = document.getElementById("bdBtnLeft");
@@ -1512,17 +1668,36 @@
         }
         setupEventListeners() {
           if (this.resetBdBtn) {
-            this.resetBdBtn.addEventListener("click", () => this.init());
+            this.resetBdBtn.addEventListener("click", () => this.startLevel(this.currentLevelIndex));
+          }
+          if (this.bdPrevLevelBtn) {
+            this.bdPrevLevelBtn.addEventListener("click", () => this.prevLevel());
+          }
+          if (this.bdNextLevelBtn) {
+            this.bdNextLevelBtn.addEventListener("click", () => this.nextLevel());
           }
         }
         init() {
-          if (this.interval) clearInterval(this.interval);
           this.score = 0;
+          this.currentLevelIndex = 0;
+          this.startLevel(0);
+        }
+        startLevel(levelIndex) {
+          if (levelIndex < 0 || levelIndex >= BD_TOTAL_LEVELS) return;
+          if (this.interval) clearInterval(this.interval);
+          this.currentLevelIndex = levelIndex;
           this.collectedDiamonds = 0;
           this.totalDiamonds = 0;
           this.gameOver = false;
           this.won = false;
-          this.generateCave();
+          this.levelFinished = false;
+          this.exitRevealed = false;
+          if (this.levelTimeout) {
+            clearTimeout(this.levelTimeout);
+            this.levelTimeout = void 0;
+          }
+          const levelDef = BD_LEVELS[levelIndex];
+          this.generateCave(levelDef);
           for (let y = 0; y < this.BD_SIZE; y++) {
             for (let x = 0; x < this.BD_SIZE; x++) {
               if (this.board[y][x] === BD_PLAYER_CHAR) {
@@ -1539,9 +1714,10 @@
               }
             }
           }
-          if (this.totalDiamonds < this.BD_TARGET_COLLECT) {
-            this.totalDiamonds = this.BD_TARGET_COLLECT;
+          if (this.totalDiamonds < levelDef.target) {
+            this.totalDiamonds = levelDef.target;
           }
+          this.updateLevelButtons();
           this.updateStatus();
           this.draw();
           this.interval = setInterval(() => {
@@ -1554,6 +1730,10 @@
           if (this.interval) {
             clearInterval(this.interval);
             this.interval = void 0;
+          }
+          if (this.levelTimeout) {
+            clearTimeout(this.levelTimeout);
+            this.levelTimeout = void 0;
           }
         }
         handleKey(e) {
@@ -1584,7 +1764,7 @@
               break;
           }
         }
-        generateCave() {
+        generateCave(levelDef) {
           this.board = [];
           for (let y = 0; y < this.BD_SIZE; y++) {
             this.board[y] = [];
@@ -1600,7 +1780,8 @@
             this.board[y][0] = BD_WALL_CHAR;
             this.board[y][this.BD_SIZE - 1] = BD_WALL_CHAR;
           }
-          const numWalls = 8 + Math.floor(Math.random() * 8);
+          const wallVariation = Math.max(1, Math.floor(levelDef.wallBlocks * 0.3));
+          const numWalls = levelDef.wallBlocks + Math.floor(Math.random() * wallVariation);
           for (let i = 0; i < numWalls; i++) {
             const x = 2 + Math.floor(Math.random() * (this.BD_SIZE - 4));
             const y = 2 + Math.floor(Math.random() * (this.BD_SIZE - 4));
@@ -1612,7 +1793,8 @@
               }
             }
           }
-          const numBoulders = 10 + Math.floor(Math.random() * 9);
+          const boulderVariation = Math.max(1, Math.floor(levelDef.boulderCount * 0.3));
+          const numBoulders = levelDef.boulderCount + Math.floor(Math.random() * boulderVariation);
           for (let i = 0; i < numBoulders; i++) {
             const x = 1 + Math.floor(Math.random() * (this.BD_SIZE - 2));
             const y = 1 + Math.floor(Math.random() * (this.BD_SIZE - 2));
@@ -1620,7 +1802,8 @@
               this.board[y][x] = BD_BOULDER_CHAR;
             }
           }
-          const numDiamonds = 15 + Math.floor(Math.random() * 11);
+          const diamondVariation = Math.max(1, Math.floor(levelDef.diamondCount * 0.25));
+          const numDiamonds = levelDef.diamondCount + Math.floor(Math.random() * diamondVariation);
           for (let i = 0; i < numDiamonds; i++) {
             const x = 1 + Math.floor(Math.random() * (this.BD_SIZE - 2));
             const y = 1 + Math.floor(Math.random() * (this.BD_SIZE - 2));
@@ -1631,21 +1814,56 @@
           this.board[2][2] = BD_PLAYER_CHAR;
           this.playerX = 2;
           this.playerY = 2;
-          const mwX = this.BD_SIZE - 3;
-          const mwY = this.BD_SIZE - 3;
-          if (this.board[mwY][mwX] === BD_DIRT_CHAR) {
-            this.board[mwY][mwX] = BD_MAGIC_WALL_CHAR;
+          this.exitX = this.BD_SIZE - 3;
+          this.exitY = this.BD_SIZE - 3;
+          if (this.board[this.exitY][this.exitX] === BD_DIRT_CHAR) {
+            this.board[this.exitY][this.exitX] = BD_EXIT_CHAR;
+          } else {
+            for (let dy = -2; dy <= 0; dy++) {
+              for (let dx = -2; dx <= 0; dx++) {
+                const tryX = this.BD_SIZE - 3 + dx;
+                const tryY = this.BD_SIZE - 3 + dy;
+                if (tryX > 1 && tryY > 1 && this.board[tryY][tryX] === BD_DIRT_CHAR) {
+                  this.exitX = tryX;
+                  this.exitY = tryY;
+                  this.board[tryY][tryX] = BD_EXIT_CHAR;
+                  dy = -99;
+                  dx = -99;
+                }
+              }
+            }
           }
         }
         updateStatus() {
           if (this.bdStatusElement) {
+            const levelDef = BD_LEVELS[this.currentLevelIndex];
             if (this.won) {
-              this.bdStatusElement.textContent = `\u{1F389} Gewonnen! \u{1F48E} ${this.collectedDiamonds}/${this.totalDiamonds}  Punkte: ${this.score}`;
+              if (this.currentLevelIndex >= BD_TOTAL_LEVELS - 1) {
+                this.bdStatusElement.textContent = `\u{1F3C6} Alle Level geschafft! \u{1F3C6}  \u{1F48E} ${this.collectedDiamonds}  Punkte: ${this.score}`;
+              } else {
+                this.bdStatusElement.textContent = `\u{1F6AA} Ausgang erreicht! \u{1F48E} ${this.collectedDiamonds}  Punkte: ${this.score}  \u2014  Weiter zum n\xE4chsten Level ...`;
+              }
             } else if (this.gameOver) {
-              this.bdStatusElement.textContent = `\u{1F480} Game Over! \u{1F48E} ${this.collectedDiamonds}/${this.totalDiamonds}`;
+              this.bdStatusElement.textContent = `\u{1F480} Game Over! Level ${this.currentLevelIndex + 1}: ${levelDef.name}  \u{1F48E} ${this.collectedDiamonds}`;
+            } else if (this.exitRevealed) {
+              this.bdStatusElement.textContent = `\u{1F6AA} Der Ausgang ist offen! Finde ihn!  \u{1F48E} ${this.collectedDiamonds}/${levelDef.target}  Punkte: ${this.score}`;
             } else {
-              this.bdStatusElement.textContent = `Sammle \u{1F48E} ${this.collectedDiamonds}/${this.totalDiamonds}  Punkte: ${this.score}`;
+              this.bdStatusElement.textContent = `Level ${this.currentLevelIndex + 1}/${BD_TOTAL_LEVELS}  \u{1F48E} ${this.collectedDiamonds}/${levelDef.target}  Punkte: ${this.score}`;
             }
+          }
+          if (this.bdLevelDisplay) {
+            this.bdLevelDisplay.textContent = `Level ${this.currentLevelIndex + 1}/${BD_TOTAL_LEVELS}`;
+          }
+          if (this.bdLevelName) {
+            this.bdLevelName.textContent = BD_LEVELS[this.currentLevelIndex].name;
+          }
+        }
+        updateLevelButtons() {
+          if (this.bdPrevLevelBtn) {
+            this.bdPrevLevelBtn.classList.toggle("disabled", this.currentLevelIndex <= 0);
+          }
+          if (this.bdNextLevelBtn) {
+            this.bdNextLevelBtn.classList.toggle("disabled", this.currentLevelIndex >= BD_TOTAL_LEVELS - 1);
           }
         }
         draw() {
@@ -1723,16 +1941,30 @@
                   this.ctx.arc(px + 10, py + 12, 3, 0, Math.PI);
                   this.ctx.stroke();
                   break;
-                case BD_MAGIC_WALL_CHAR:
-                  this.ctx.fillStyle = "#1a1a2e";
-                  this.ctx.fillRect(px, py, cs, cs);
-                  this.ctx.fillStyle = "#ff00ff";
-                  this.ctx.fillRect(px + 2, py + 2, cs - 4, cs - 4);
-                  this.ctx.fillStyle = "#ff69b4";
-                  this.ctx.fillRect(px + 5, py + 5, cs - 10, cs - 10);
-                  this.ctx.fillStyle = "#ff00ff";
-                  this.ctx.font = "10px monospace";
-                  this.ctx.fillText("\u2605", px + 5, py + 15);
+                case BD_EXIT_CHAR:
+                  if (this.exitRevealed) {
+                    this.ctx.fillStyle = "#1a1a2e";
+                    this.ctx.fillRect(px, py, cs, cs);
+                    this.ctx.fillStyle = "#ffd700";
+                    this.ctx.fillRect(px + 3, py + 3, cs - 6, cs - 6);
+                    this.ctx.fillStyle = "#fff8dc";
+                    this.ctx.font = "14px monospace";
+                    this.ctx.fillText("\u{1F6AA}", px + 2, py + 16);
+                    this.ctx.strokeStyle = "rgba(255,215,0,0.6)";
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(px + 1, py + 1, cs - 2, cs - 2);
+                    this.ctx.lineWidth = 1;
+                  } else {
+                    this.ctx.fillStyle = "#1a1a2e";
+                    this.ctx.fillRect(px, py, cs, cs);
+                    this.ctx.fillStyle = "#4a3728";
+                    this.ctx.fillRect(px + 2, py + 4, cs - 4, cs - 6);
+                    this.ctx.fillStyle = "#b8860b";
+                    this.ctx.font = "12px monospace";
+                    this.ctx.fillText("\u{1F512}", px + 3, py + 16);
+                    this.ctx.strokeStyle = "#b8860b";
+                    this.ctx.strokeRect(px + 2, py + 4, cs - 4, cs - 6);
+                  }
                   break;
               }
             }
@@ -1777,23 +2009,17 @@
             this.checkWinCondition();
             return;
           }
-          if (target === BD_MAGIC_WALL_CHAR) {
+          if (target === BD_EXIT_CHAR) {
             this.board[this.playerY][this.playerX] = BD_EMPTY_CHAR;
             this.playerX = nx;
             this.playerY = ny;
             this.board[ny][nx] = BD_PLAYER_CHAR;
-            for (let dy2 = -1; dy2 <= 1; dy2++) {
-              for (let dx2 = -1; dx2 <= 1; dx2++) {
-                const mx = nx + dx2;
-                const my = ny + dy2;
-                if (mx >= 1 && mx < this.BD_SIZE - 1 && my >= 1 && my < this.BD_SIZE - 1) {
-                  if (this.board[my][mx] === BD_DIRT_CHAR) {
-                    this.board[my][mx] = BD_EMPTY_CHAR;
-                  }
-                }
-              }
-            }
             this.draw();
+            if (this.exitRevealed) {
+              this.winLevel();
+            } else {
+              this.updateStatus();
+            }
             return;
           }
         }
@@ -1849,12 +2075,47 @@
           }
         }
         checkWinCondition() {
-          if (this.collectedDiamonds >= this.BD_TARGET_COLLECT && !this.won && !this.gameOver) {
-            this.won = true;
-            this.score += 50;
+          if (this.levelFinished || this.won || this.gameOver) return;
+          const levelDef = BD_LEVELS[this.currentLevelIndex];
+          if (this.collectedDiamonds >= levelDef.target && !this.exitRevealed) {
+            this.exitRevealed = true;
+            this.score += 20;
             this.updateStatus();
-            if (this.interval) clearInterval(this.interval);
             this.draw();
+            if (this.playerX === this.exitX && this.playerY === this.exitY) {
+              this.winLevel();
+            }
+          }
+        }
+        winLevel() {
+          this.won = true;
+          this.score += 50;
+          this.updateStatus();
+          if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = void 0;
+          }
+          this.draw();
+          this.levelFinished = true;
+          this.levelTimeout = setTimeout(() => {
+            const nextIdx = this.currentLevelIndex + 1;
+            if (nextIdx < BD_TOTAL_LEVELS) {
+              this.startLevel(nextIdx);
+            } else {
+              this.updateStatus();
+            }
+          }, 2e3);
+        }
+        nextLevel() {
+          const nextIdx = this.currentLevelIndex + 1;
+          if (nextIdx < BD_TOTAL_LEVELS) {
+            this.startLevel(nextIdx);
+          }
+        }
+        prevLevel() {
+          const prevIdx = this.currentLevelIndex - 1;
+          if (prevIdx >= 0) {
+            this.startLevel(prevIdx);
           }
         }
         setupMobileControls() {
@@ -4569,6 +4830,7 @@
       var registry = null;
       document.addEventListener("DOMContentLoaded", () => {
         registry = new GameRegistry();
+        window.__gameRegistry = registry;
         registry.initDefault();
       });
     }

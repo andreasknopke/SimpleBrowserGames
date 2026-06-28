@@ -590,6 +590,63 @@ button:hover {
     box-shadow: 0 0 15px rgba(184, 134, 11, 0.3);
 }
 
+/* Boulder Dash – Level bar */
+
+.bd-level-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 6px 12px;
+    background: #1a1a2e;
+    border: 1px solid #b8860b;
+    border-radius: 10px;
+}
+
+.bd-level-btn {
+    padding: 6px 14px;
+    font-size: 1rem;
+    cursor: pointer;
+    border: 1px solid #b8860b;
+    border-radius: 8px;
+    background-color: #2a2a3e;
+    color: #ffd700;
+    transition: background-color 0.15s, opacity 0.2s;
+    user-select: none;
+    min-width: 0;
+}
+
+.bd-level-btn:hover:not(.disabled) {
+    background-color: #b8860b;
+    color: #fff;
+}
+
+.bd-level-btn.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.bd-level-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 160px;
+}
+
+#bdLevelDisplay {
+    color: #b8860b;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+#bdLevelName {
+    color: #ffd700;
+    font-weight: bold;
+    font-size: 1.05rem;
+}
+
 /* =============================================
    Tower Defense
    ============================================= */

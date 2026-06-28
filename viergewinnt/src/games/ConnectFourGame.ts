@@ -160,24 +160,87 @@ export class ConnectFourGame implements Game {
     }
 
     // =============================================
-    // AI Implementation (Minimax with Alpha-Beta Pruning)
+    // AI Implementation (Minimax + Alpha-Beta + Heuristik)
     // =============================================
 
-    private getBestMove(): number {
-        let bestScore: number = -Infinity;
-        let move: number = -1;
-        const availableCols: number[] = this.getAvailableCols(this.board);
+    /** Transpositionstabelle – wird pro getBestMove-Aufruf neu angelegt. */
+    private transpositionTable: Map<string, number> = new Map();
 
+    /**
+     * Schwierigkeitsgrad → Suchtiefe.
+     *  1 = Leicht (Tiefe 2, mit Zufall)
+     *  2 = Mittel (Tiefe 4)
+     *  3 = Schwer (Tiefe 6)
+     *  4 = Extrem (Tiefe 8, mit Transpositionstabelle)
+     */
+    private getSearchDepth(): number {
+        switch (this.difficulty) {
+            case 1: return 2;
+            case 2: return 4;
+            case 3: return 6;
+            case 4: return 8;
+            default: return 4;
+        }
+    }
+
+    /**
+     * Gibt die beste Spalte zurück.
+     * Reihenfolge: Sofortgewinn → Block → Minimax.
+     */
+    private getBestMove(): number {
+        this.transpositionTable.clear();
+        const availableCols: number[] = this.getAvailableCols(this.board);
+        if (availableCols.length === 0) return -1;
+
+        // --- Sofortgewinn ---
         for (const col of availableCols) {
             const tempBoard: Board = this.board.map(row => [...row]);
             this.makeMoveInBoard(tempBoard, col, this.PLAYER2);
-            const score: number = this.minimax(tempBoard, this.difficulty, -Infinity, Infinity, false);
+            if (this.checkWin(tempBoard, this.PLAYER2)) return col;
+        }
+
+        // --- Blockiere gegnerischen Sofortgewinn ---
+        for (const col of availableCols) {
+            const tempBoard: Board = this.board.map(row => [...row]);
+            this.makeMoveInBoard(tempBoard, col, this.PLAYER1);
+            if (this.checkWin(tempBoard, this.PLAYER1)) return col;
+        }
+
+        // --- Minimax mit Alpha-Beta ---
+        const depth: number = this.getSearchDepth();
+        let bestScore: number = -Infinity;
+        let bestMoves: number[] = [];
+        const orderedCols: number[] = this.orderColumns(availableCols);
+
+        for (const col of orderedCols) {
+            const tempBoard: Board = this.board.map(row => [...row]);
+            this.makeMoveInBoard(tempBoard, col, this.PLAYER2);
+            const score: number = this.minimax(tempBoard, depth, -Infinity, Infinity, false);
             if (score > bestScore) {
                 bestScore = score;
-                move = col;
+                bestMoves = [col];
+            } else if (score === bestScore) {
+                bestMoves.push(col);
             }
         }
-        return move;
+
+        // Bei „Leicht" (difficulty=1) mit 40 % Wahrscheinlichkeit einen
+        // zufälligen Zug statt des besten wählen.
+        if (this.difficulty === 1 && Math.random() < 0.4) {
+            return availableCols[Math.floor(Math.random() * availableCols.length)];
+        }
+
+        // Aus gleichwertigen Zügen einen zufällig wählen (Variabilität).
+        return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+    }
+
+    /**
+     * Spalten in der Reihenfolge „Mitte zuerst" sortieren –
+     * verbessert Alpha-Beta-Pruning drastisch.
+     */
+    private orderColumns(cols: number[]): number[] {
+        const centerDistances: number[] = [3, 2, 4, 1, 5, 0, 6];
+        return cols.sort((a, b) => centerDistances.indexOf(a) - centerDistances.indexOf(b));
     }
 
     private getAvailableCols(board: Board): number[] {
@@ -197,16 +260,30 @@ export class ConnectFourGame implements Game {
         }
     }
 
+    /**
+     * Minimax mit Alpha-Beta-Pruning und Transpositionstabelle.
+     */
     private minimax(board: Board, depth: number, alpha: number, beta: number, isMaximizing: boolean): number {
-        if (this.checkWin(board, this.PLAYER2)) return 10000 + depth;
-        if (this.checkWin(board, this.PLAYER1)) return -10000 - depth;
-        if (this.isBoardFull() || depth === 0) return this.evaluateBoard(board);
+        if (this.checkWin(board, this.PLAYER2)) return 100000 + depth;
+        if (this.checkWin(board, this.PLAYER1)) return -100000 - depth;
 
         const availableCols: number[] = this.getAvailableCols(board);
+        if (this.isBoardFull() || availableCols.length === 0 || depth === 0) {
+            return this.evaluateBoard(board);
+        }
+
+        // Transpositionstabelle-Abfrage
+        if (this.transpositionTable.size > 0) {
+            const key: string = this.boardToKey(board);
+            const cached = this.transpositionTable.get(key);
+            if (cached !== undefined) return cached;
+        }
+
+        const orderedCols: number[] = this.orderColumns(availableCols);
 
         if (isMaximizing) {
             let maxEval: number = -Infinity;
-            for (const col of availableCols) {
+            for (const col of orderedCols) {
                 const tempBoard: Board = board.map(row => [...row]);
                 this.makeMoveInBoard(tempBoard, col, this.PLAYER2);
                 const evaluation: number = this.minimax(tempBoard, depth - 1, alpha, beta, false);
@@ -214,10 +291,11 @@ export class ConnectFourGame implements Game {
                 alpha = Math.max(alpha, evaluation);
                 if (beta <= alpha) break;
             }
+            this.cacheBoard(board, maxEval);
             return maxEval;
         } else {
             let minEval: number = Infinity;
-            for (const col of availableCols) {
+            for (const col of orderedCols) {
                 const tempBoard: Board = board.map(row => [...row]);
                 this.makeMoveInBoard(tempBoard, col, this.PLAYER1);
                 const evaluation: number = this.minimax(tempBoard, depth - 1, alpha, beta, true);
@@ -225,16 +303,94 @@ export class ConnectFourGame implements Game {
                 beta = Math.min(beta, evaluation);
                 if (beta <= alpha) break;
             }
+            this.cacheBoard(board, minEval);
             return minEval;
         }
     }
 
+    /** Board als String-Key für die Transpositionstabelle. */
+    private boardToKey(board: Board): string {
+        return board.map(row => row.join(',')).join('|');
+    }
+
+    /** Ergebnis im Cache speichern (nur bei Extrem-Schwer). */
+    private cacheBoard(board: Board, value: number): void {
+        if (this.difficulty >= 4) {
+            const key: string = this.boardToKey(board);
+            if (!this.transpositionTable.has(key)) {
+                this.transpositionTable.set(key, value);
+            }
+        }
+    }
+
+    /**
+     * Window-basierte Heuristik.
+     * Bewertert alle 4er-Fenster (horizontal, vertikal, beide Diagonalen).
+     */
     private evaluateBoard(board: Board): number {
         let score: number = 0;
+
+        // Mittelspalten-Bonus
         for (let r = 0; r < this.ROWS; r++) {
-            if (board[r][3] === this.PLAYER2) score += 3;
-            else if (board[r][3] === this.PLAYER1) score -= 3;
+            if (board[r][3] === this.PLAYER2) score += 4;
+            else if (board[r][3] === this.PLAYER1) score -= 4;
+        }
+
+        // Horizontale Fenster
+        score += this.evaluateDirection(board, 0, 1);
+        // Vertikale Fenster
+        score += this.evaluateDirection(board, 1, 0);
+        // Diagonal ↘
+        score += this.evaluateDirection(board, 1, 1);
+        // Diagonal ↙
+        score += this.evaluateDirection(board, -1, 1);
+
+        return score;
+    }
+
+    /**
+     * Bewertere alle 4er-Fenster in einer Richtung.
+     * @param dr  Zeilen-Inkrement
+     * @param dc  Spalten-Inkrement
+     */
+    private evaluateDirection(board: Board, dr: number, dc: number): number {
+        let score: number = 0;
+        for (let r = 0; r < this.ROWS; r++) {
+            for (let c = 0; c < this.COLS; c++) {
+                const window: CellValue[] = [];
+                let valid: boolean = true;
+                for (let i = 0; i < 4; i++) {
+                    const nr: number = r + dr * i;
+                    const nc: number = c + dc * i;
+                    if (nr < 0 || nr >= this.ROWS || nc < 0 || nc >= this.COLS) {
+                        valid = false;
+                        break;
+                    }
+                    window.push(board[nr][nc]);
+                }
+                if (!valid) continue;
+                score += this.evaluateWindow(window);
+            }
         }
         return score;
+    }
+
+    /**
+     * Bewerte ein einzelnes 4er-Fenster.
+     * 4 eigene → +1 000 000
+     * 3 eigene + 1 leer → +50
+     * 2 eigene + 2 leer → +5
+     * 3 gegner + 1 leer → −80  (Defensivbias: Blocken priorisieren)
+     */
+    private evaluateWindow(window: CellValue[]): number {
+        const aiCount: number = window.filter(v => v === this.PLAYER2).length;
+        const oppCount: number = window.filter(v => v === this.PLAYER1).length;
+        const emptyCount: number = window.filter(v => v === 0).length;
+
+        if (aiCount === 4) return 1000000;
+        if (aiCount === 3 && emptyCount === 1) return 50;
+        if (aiCount === 2 && emptyCount === 2) return 5;
+        if (oppCount === 3 && emptyCount === 1) return -80;
+        return 0;
     }
 }
