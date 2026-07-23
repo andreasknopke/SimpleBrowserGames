@@ -4621,6 +4621,639 @@
     }
   });
 
+  // src/games/GoGame.ts
+  var GoGame;
+  var init_GoGame = __esm({
+    "src/games/GoGame.ts"() {
+      "use strict";
+      GoGame = class {
+        constructor() {
+          this.id = "go";
+          this.BOARD_SIZE = 9;
+          this.CELL_SIZE = 40;
+          this.MARGIN = 20;
+          this.LINE_COUNT = this.BOARD_SIZE - 1;
+          this.board = [];
+          this.currentPlayer = "black";
+          this.gameOver = false;
+          this.moveHistory = [];
+          this.koPoint = null;
+          this.lastBoard = null;
+          this.gameMode = "2p";
+          this.blackCaptured = 0;
+          this.whiteCaptured = 0;
+          this.blackTerritory = 0;
+          this.whiteTerritory = 0;
+          this.resetGoBtn = null;
+          this.goStatusElement = null;
+          this.goBoardElement = null;
+          this.goCanvas = null;
+          this.goPassBtn = null;
+          this.goUndoBtn = null;
+          this.goModeSelect = null;
+          this.ctx = null;
+          this.resetGoBtn = document.getElementById("resetGoBtn");
+          this.goStatusElement = document.getElementById("goStatus");
+          this.goBoardElement = document.getElementById("goBoard");
+          this.goCanvas = document.getElementById("goCanvas");
+          this.goPassBtn = document.getElementById("goPassBtn");
+          this.goUndoBtn = document.getElementById("goUndoBtn");
+          this.goModeSelect = document.getElementById("goMode");
+          this.ctx = this.goCanvas ? this.goCanvas.getContext("2d") : null;
+          this.setupEventListeners();
+        }
+        setupEventListeners() {
+          if (this.resetGoBtn) {
+            this.resetGoBtn.addEventListener("click", () => this.init());
+          }
+          if (this.goPassBtn) {
+            this.goPassBtn.addEventListener("click", () => this.pass());
+          }
+          if (this.goUndoBtn) {
+            this.goUndoBtn.addEventListener("click", () => this.undo());
+          }
+          if (this.goModeSelect) {
+            this.goModeSelect.addEventListener("change", () => {
+              this.gameMode = this.goModeSelect.value;
+              this.init();
+            });
+          }
+          if (this.goCanvas) {
+            this.goCanvas.addEventListener("click", (e) => this.handleCanvasClick(e));
+          }
+        }
+        init() {
+          this.board = Array.from(
+            { length: this.BOARD_SIZE },
+            () => Array(this.BOARD_SIZE).fill("empty")
+          );
+          this.currentPlayer = "black";
+          this.gameOver = false;
+          this.moveHistory = [];
+          this.koPoint = null;
+          this.lastBoard = null;
+          this.blackCaptured = 0;
+          this.whiteCaptured = 0;
+          this.blackTerritory = 0;
+          this.whiteTerritory = 0;
+          this.updateStatus();
+          this.draw();
+        }
+        cleanup() {
+        }
+        handleCanvasClick(e) {
+          if (this.gameOver || !this.goCanvas) return;
+          if (this.gameMode === "1p" && this.currentPlayer === "white") return;
+          const rect = this.goCanvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const adjustedX = x - this.MARGIN;
+          const adjustedY = y - this.MARGIN;
+          const col = Math.round(adjustedX / this.CELL_SIZE);
+          const row = Math.round(adjustedY / this.CELL_SIZE);
+          if (row < 0 || row >= this.BOARD_SIZE || col < 0 || col >= this.BOARD_SIZE) return;
+          if (this.board[row][col] !== "empty") return;
+          if (this.makeMove(row, col)) {
+            if (this.gameMode === "1p" && this.currentPlayer === "white" && !this.gameOver) {
+              setTimeout(() => this.makeAiMove(), 300);
+            }
+          }
+        }
+        makeMove(row, col) {
+          if (this.gameOver) return false;
+          if (this.koPoint && this.koPoint.row === row && this.koPoint.col === col) {
+            this.updateStatus("Ko-Verletzung! W\xE4hle einen anderen Zug.");
+            return false;
+          }
+          this.lastBoard = this.board.map((r) => [...r]);
+          this.board[row][col] = this.currentPlayer;
+          const opponent = this.currentPlayer === "black" ? "white" : "black";
+          const captured = [];
+          const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          for (const [dr, dc] of directions) {
+            const nr = row + dr;
+            const nc = col + dc;
+            if (nr >= 0 && nr < this.BOARD_SIZE && nc >= 0 && nc < this.BOARD_SIZE && this.board[nr][nc] === opponent) {
+              const group = this.getGroup(nr, nc);
+              if (this.getLiberties(group) === 0) {
+                for (const stone of group.stones) {
+                  this.board[stone.row][stone.col] = "empty";
+                  captured.push(stone);
+                }
+              }
+            }
+          }
+          if (this.currentPlayer === "black") {
+            this.whiteCaptured += captured.length;
+          } else {
+            this.blackCaptured += captured.length;
+          }
+          const myGroup = this.getGroup(row, col);
+          if (this.getLiberties(myGroup) === 0) {
+            this.board = this.lastBoard.map((r) => [...r]);
+            this.updateStatus("Selbstmord ist illegal!");
+            return false;
+          }
+          this.koPoint = null;
+          if (captured.length === 1) {
+            const capturedStone = captured[0];
+            const myLiberties = this.getLiberties(this.getGroup(row, col));
+            if (myLiberties === 1) {
+              this.koPoint = { row: capturedStone.row, col: capturedStone.col };
+            }
+          }
+          this.moveHistory.push({ row, col, color: this.currentPlayer });
+          this.currentPlayer = this.currentPlayer === "black" ? "white" : "black";
+          this.updateStatus();
+          this.draw();
+          return true;
+        }
+        getGroup(row, col) {
+          const color = this.board[row][col];
+          if (color === "empty") return { stones: [], liberties: 0 };
+          const visited = Array.from(
+            { length: this.BOARD_SIZE },
+            () => Array(this.BOARD_SIZE).fill(false)
+          );
+          const stones = [];
+          const libertiesSet = /* @__PURE__ */ new Set();
+          const queue = [{ row, col }];
+          visited[row][col] = true;
+          const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          while (queue.length > 0) {
+            const current = queue.shift();
+            stones.push(current);
+            for (const [dr, dc] of directions) {
+              const nr = current.row + dr;
+              const nc = current.col + dc;
+              if (nr < 0 || nr >= this.BOARD_SIZE || nc < 0 || nc >= this.BOARD_SIZE) continue;
+              if (this.board[nr][nc] === color && !visited[nr][nc]) {
+                visited[nr][nc] = true;
+                queue.push({ row: nr, col: nc });
+              } else if (this.board[nr][nc] === "empty") {
+                libertiesSet.add(`${nr},${nc}`);
+              }
+            }
+          }
+          return { stones, liberties: libertiesSet.size };
+        }
+        getLiberties(group) {
+          return group.liberties;
+        }
+        pass() {
+          if (this.gameOver) return;
+          this.moveHistory.push({ row: -1, col: -1, color: this.currentPlayer });
+          const lastTwo = this.moveHistory.slice(-2);
+          if (lastTwo.length === 2 && lastTwo[0].row === -1 && lastTwo[1].row === -1) {
+            this.endGame();
+          } else {
+            this.currentPlayer = this.currentPlayer === "black" ? "white" : "black";
+            this.updateStatus();
+            if (this.gameMode === "1p" && this.currentPlayer === "white" && !this.gameOver) {
+              setTimeout(() => this.makeAiMove(), 300);
+            }
+          }
+        }
+        undo() {
+          if (this.moveHistory.length === 0) return;
+          let lastMoveIdx = -1;
+          for (let i = this.moveHistory.length - 1; i >= 0; i--) {
+            if (this.moveHistory[i].row !== -1) {
+              lastMoveIdx = i;
+              break;
+            }
+          }
+          if (lastMoveIdx === -1) return;
+          if (this.lastBoard) {
+            this.board = this.lastBoard.map((r) => [...r]);
+          }
+          this.moveHistory = this.moveHistory.slice(0, lastMoveIdx);
+          this.currentPlayer = this.currentPlayer === "black" ? "white" : "black";
+          this.koPoint = null;
+          this.lastBoard = null;
+          this.recalculateCaptured();
+          this.updateStatus();
+          this.draw();
+        }
+        recalculateCaptured() {
+          this.blackCaptured = 0;
+          this.whiteCaptured = 0;
+          let blackStones = 0;
+          let whiteStones = 0;
+          for (let r = 0; r < this.BOARD_SIZE; r++) {
+            for (let c = 0; c < this.BOARD_SIZE; c++) {
+              if (this.board[r][c] === "black") blackStones++;
+              else if (this.board[r][c] === "white") whiteStones++;
+            }
+          }
+          const blackMoves = this.moveHistory.filter((m) => m.color === "black" && m.row !== -1).length;
+          const whiteMoves = this.moveHistory.filter((m) => m.color === "white" && m.row !== -1).length;
+          this.blackCaptured = blackMoves - blackStones;
+          this.whiteCaptured = whiteMoves - whiteStones;
+        }
+        endGame() {
+          this.gameOver = true;
+          this.calculateTerritory();
+          this.updateStatus();
+          this.draw();
+        }
+        calculateTerritory() {
+          const visited = Array.from(
+            { length: this.BOARD_SIZE },
+            () => Array(this.BOARD_SIZE).fill(false)
+          );
+          const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          for (let r = 0; r < this.BOARD_SIZE; r++) {
+            for (let c = 0; c < this.BOARD_SIZE; c++) {
+              if (this.board[r][c] !== "empty" || visited[r][c]) continue;
+              const region = [];
+              const borderColors = /* @__PURE__ */ new Set();
+              const queue = [{ row: r, col: c }];
+              visited[r][c] = true;
+              while (queue.length > 0) {
+                const current = queue.shift();
+                region.push(current);
+                for (const [dr, dc] of directions) {
+                  const nr = current.row + dr;
+                  const nc = current.col + dc;
+                  if (nr < 0 || nr >= this.BOARD_SIZE || nc < 0 || nc >= this.BOARD_SIZE) continue;
+                  if (this.board[nr][nc] === "empty" && !visited[nr][nc]) {
+                    visited[nr][nc] = true;
+                    queue.push({ row: nr, col: nc });
+                  } else if (this.board[nr][nc] !== "empty") {
+                    borderColors.add(this.board[nr][nc]);
+                  }
+                }
+              }
+              if (borderColors.size === 1) {
+                const owner = borderColors.values().next().value;
+                if (owner === "black") {
+                  this.blackTerritory += region.length;
+                } else if (owner === "white") {
+                  this.whiteTerritory += region.length;
+                }
+              }
+            }
+          }
+        }
+        updateStatus(message) {
+          if (!this.goStatusElement) return;
+          if (message) {
+            this.goStatusElement.textContent = message;
+            return;
+          }
+          if (this.gameOver) {
+            const blackScore = this.blackTerritory + this.whiteCaptured;
+            const whiteScore = this.whiteTerritory + this.blackCaptured;
+            const winner = blackScore > whiteScore ? "Schwarz" : whiteScore > blackScore ? "Wei\xDF" : "Unentschieden";
+            this.goStatusElement.textContent = `Spiel vorbei! ${winner} gewinnt. Schwarz: ${blackScore} | Wei\xDF: ${whiteScore}`;
+          } else {
+            const playerName = this.currentPlayer === "black" ? "Schwarz" : "Wei\xDF";
+            this.goStatusElement.textContent = `${playerName} ist am Zug | Schwarz f\xE4ngt: ${this.whiteCaptured} | Wei\xDF f\xE4ngt: ${this.blackCaptured}`;
+          }
+        }
+        // =============================================
+        // MCTS AI
+        // =============================================
+        makeAiMove() {
+          if (this.gameOver) return;
+          const aiPlayer = "white";
+          const bestMove = this.mctsSearch(aiPlayer);
+          if (bestMove) {
+            this.makeMove(bestMove.row, bestMove.col);
+          } else {
+            this.pass();
+          }
+        }
+        /**
+         * Monte Carlo Tree Search for Go.
+         * Uses UCB1 for tree policy and random playouts for simulation.
+         */
+        mctsSearch(aiPlayer) {
+          const ITERATIONS = 500;
+          const startTime = Date.now();
+          const TIME_LIMIT = 2500;
+          const root = {
+            row: -1,
+            col: -1,
+            player: aiPlayer,
+            visits: 0,
+            wins: 0,
+            children: [],
+            parent: null,
+            board: this.board.map((r) => [...r]),
+            ko: this.koPoint,
+            unvisited: this.getValidMoves(this.board, this.koPoint)
+          };
+          for (let i = 0; i < ITERATIONS; i++) {
+            if (Date.now() - startTime > TIME_LIMIT) break;
+            const node = this.selectNode(root);
+            if (node.unvisited.length > 0) {
+              this.expandNode(node);
+            }
+            const winner = this.simulate(node);
+            this.backpropagate(node, winner, aiPlayer);
+          }
+          if (root.children.length === 0) return null;
+          let bestChild = root.children[0];
+          for (const child of root.children) {
+            if (child.visits > bestChild.visits) {
+              bestChild = child;
+            }
+          }
+          return { row: bestChild.row, col: bestChild.col };
+        }
+        selectNode(node) {
+          while (node.children.length > 0 && node.unvisited.length === 0) {
+            let bestChild = node.children[0];
+            let bestValue = -Infinity;
+            for (const child of node.children) {
+              const ucb = this.ucb1(child, node.visits);
+              if (ucb > bestValue) {
+                bestValue = ucb;
+                bestChild = child;
+              }
+            }
+            node = bestChild;
+          }
+          return node;
+        }
+        ucb1(node, parentVisits) {
+          if (node.visits === 0) return Infinity;
+          const exploit = node.wins / node.visits;
+          const explore = Math.sqrt(2 * Math.log(parentVisits) / node.visits);
+          return exploit + explore;
+        }
+        expandNode(node) {
+          if (node.unvisited.length === 0) return;
+          const idx = Math.floor(Math.random() * node.unvisited.length);
+          const move = node.unvisited.splice(idx, 1)[0];
+          const newBoard = node.board.map((r) => [...r]);
+          const player = node.player === "black" ? "white" : "black";
+          this.applyMove(newBoard, move.row, move.col, player);
+          const child = {
+            row: move.row,
+            col: move.col,
+            player,
+            visits: 0,
+            wins: 0,
+            children: [],
+            parent: node,
+            board: newBoard,
+            ko: null,
+            unvisited: this.getValidMoves(newBoard, null)
+          };
+          node.children.push(child);
+        }
+        simulate(node) {
+          const board = node.board.map((r) => [...r]);
+          let currentPlayer = node.player === "black" ? "white" : "black";
+          let ko = null;
+          const MAX_MOVES = 40;
+          let moves = 0;
+          while (moves < MAX_MOVES) {
+            const validMoves = this.getValidMoves(board, ko);
+            if (validMoves.length === 0) {
+              currentPlayer = currentPlayer === "black" ? "white" : "black";
+              moves++;
+              continue;
+            }
+            const move = this.pickBiasedRandomMove(validMoves);
+            this.applyMove(board, move.row, move.col, currentPlayer);
+            currentPlayer = currentPlayer === "black" ? "white" : "black";
+            moves++;
+          }
+          return this.evaluateWinner(board);
+        }
+        pickBiasedRandomMove(moves) {
+          const center = Math.floor(this.BOARD_SIZE / 2);
+          let bestMove = moves[0];
+          let bestDist = Infinity;
+          if (Math.random() < 0.7) {
+            for (const move of moves) {
+              const dist = Math.abs(move.row - center) + Math.abs(move.col - center);
+              if (dist < bestDist) {
+                bestDist = dist;
+                bestMove = move;
+              }
+            }
+          } else {
+            bestMove = moves[Math.floor(Math.random() * moves.length)];
+          }
+          return bestMove;
+        }
+        evaluateWinner(board) {
+          let blackCount = 0;
+          let whiteCount = 0;
+          for (let r = 0; r < this.BOARD_SIZE; r++) {
+            for (let c = 0; c < this.BOARD_SIZE; c++) {
+              if (board[r][c] === "black") blackCount++;
+              else if (board[r][c] === "white") whiteCount++;
+            }
+          }
+          if (blackCount > whiteCount) return "black";
+          if (whiteCount > blackCount) return "white";
+          return null;
+        }
+        backpropagate(node, winner, aiPlayer) {
+          while (node !== null) {
+            node.visits++;
+            if (winner === aiPlayer) {
+              node.wins++;
+            }
+            node = node.parent;
+          }
+        }
+        getValidMoves(board, ko) {
+          const moves = [];
+          for (let r = 0; r < this.BOARD_SIZE; r++) {
+            for (let c = 0; c < this.BOARD_SIZE; c++) {
+              if (board[r][c] !== "empty") continue;
+              if (ko && ko.row === r && ko.col === c) continue;
+              if (this.isSuicide(board, r, c)) continue;
+              moves.push({ row: r, col: c });
+            }
+          }
+          return moves;
+        }
+        isSuicide(board, row, col) {
+          const color = board[row][col];
+          if (color === "empty") return false;
+          board[row][col] = color;
+          const group = this.getGroupFromBoard(board, row, col);
+          const hasLiberties = group.liberties > 0;
+          const opponent = color === "black" ? "white" : "black";
+          const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          let captured = false;
+          for (const [dr, dc] of directions) {
+            const nr = row + dr;
+            const nc = col + dc;
+            if (nr >= 0 && nr < this.BOARD_SIZE && nc >= 0 && nc < this.BOARD_SIZE && board[nr][nc] === opponent) {
+              const oppGroup = this.getGroupFromBoard(board, nr, nc);
+              if (oppGroup.liberties === 0) {
+                captured = true;
+                break;
+              }
+            }
+          }
+          board[row][col] = "empty";
+          return !hasLiberties && !captured;
+        }
+        getGroupFromBoard(board, row, col) {
+          const color = board[row][col];
+          if (color === "empty") return { stones: [], liberties: 0 };
+          const visited = Array.from(
+            { length: this.BOARD_SIZE },
+            () => Array(this.BOARD_SIZE).fill(false)
+          );
+          const stones = [];
+          const libertiesSet = /* @__PURE__ */ new Set();
+          const queue = [{ row, col }];
+          visited[row][col] = true;
+          const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          while (queue.length > 0) {
+            const current = queue.shift();
+            stones.push(current);
+            for (const [dr, dc] of directions) {
+              const nr = current.row + dr;
+              const nc = current.col + dc;
+              if (nr < 0 || nr >= this.BOARD_SIZE || nc < 0 || nc >= this.BOARD_SIZE) continue;
+              if (board[nr][nc] === color && !visited[nr][nc]) {
+                visited[nr][nc] = true;
+                queue.push({ row: nr, col: nc });
+              } else if (board[nr][nc] === "empty") {
+                libertiesSet.add(`${nr},${nc}`);
+              }
+            }
+          }
+          return { stones, liberties: libertiesSet.size };
+        }
+        applyMove(board, row, col, player) {
+          board[row][col] = player;
+          const opponent = player === "black" ? "white" : "black";
+          const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          for (const [dr, dc] of directions) {
+            const nr = row + dr;
+            const nc = col + dc;
+            if (nr >= 0 && nr < this.BOARD_SIZE && nc >= 0 && nc < this.BOARD_SIZE && board[nr][nc] === opponent) {
+              const group = this.getGroupFromBoard(board, nr, nc);
+              if (group.liberties === 0) {
+                for (const stone of group.stones) {
+                  board[stone.row][stone.col] = "empty";
+                }
+              }
+            }
+          }
+        }
+        draw() {
+          if (!this.ctx || !this.goCanvas) return;
+          const size = this.CELL_SIZE;
+          const halfSize = Math.floor(size / 2);
+          const margin = this.MARGIN;
+          this.ctx.fillStyle = "#DEB887";
+          this.ctx.fillRect(0, 0, this.goCanvas.width, this.goCanvas.height);
+          this.ctx.strokeStyle = "#333";
+          this.ctx.lineWidth = 1;
+          for (let i = 0; i < this.BOARD_SIZE; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(margin + i * size, margin);
+            this.ctx.lineTo(margin + i * size, margin + this.LINE_COUNT * size);
+            this.ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.moveTo(margin, margin + i * size);
+            this.ctx.lineTo(margin + this.LINE_COUNT * size, margin + i * size);
+            this.ctx.stroke();
+          }
+          const starPoints = [
+            [0, 0],
+            [0, 4],
+            [0, 8],
+            [4, 0],
+            [4, 4],
+            [4, 8],
+            [8, 0],
+            [8, 4],
+            [8, 8]
+          ];
+          this.ctx.fillStyle = "#333";
+          for (const [r, c] of starPoints) {
+            const x = margin + c * size;
+            const y = margin + r * size;
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, 3, 0, Math.PI * 2);
+            this.ctx.fill();
+          }
+          for (let r = 0; r < this.BOARD_SIZE; r++) {
+            for (let c = 0; c < this.BOARD_SIZE; c++) {
+              if (this.board[r][c] === "empty") continue;
+              const x = margin + c * size;
+              const y = margin + r * size;
+              if (this.board[r][c] === "black") {
+                this.ctx.fillStyle = "#222";
+              } else {
+                this.ctx.fillStyle = "#fff";
+              }
+              this.ctx.beginPath();
+              this.ctx.arc(x, y, halfSize - 2, 0, Math.PI * 2);
+              this.ctx.fill();
+              this.ctx.strokeStyle = this.board[r][c] === "black" ? "#000" : "#ccc";
+              this.ctx.lineWidth = 1;
+              this.ctx.stroke();
+            }
+          }
+          if (this.gameOver) {
+            this.drawTerritory();
+          }
+        }
+        drawTerritory() {
+          if (!this.ctx || !this.goCanvas) return;
+          const size = this.CELL_SIZE;
+          const margin = this.MARGIN;
+          const visited = Array.from(
+            { length: this.BOARD_SIZE },
+            () => Array(this.BOARD_SIZE).fill(false)
+          );
+          const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          for (let r = 0; r < this.BOARD_SIZE; r++) {
+            for (let c = 0; c < this.BOARD_SIZE; c++) {
+              if (this.board[r][c] !== "empty" || visited[r][c]) continue;
+              const region = [];
+              const borderColors = /* @__PURE__ */ new Set();
+              const queue = [{ row: r, col: c }];
+              visited[r][c] = true;
+              while (queue.length > 0) {
+                const current = queue.shift();
+                region.push(current);
+                for (const [dr, dc] of directions) {
+                  const nr = current.row + dr;
+                  const nc = current.col + dc;
+                  if (nr < 0 || nr >= this.BOARD_SIZE || nc < 0 || nc >= this.BOARD_SIZE) continue;
+                  if (this.board[nr][nc] === "empty" && !visited[nr][nc]) {
+                    visited[nr][nc] = true;
+                    queue.push({ row: nr, col: nc });
+                  } else if (this.board[nr][nc] !== "empty") {
+                    borderColors.add(this.board[nr][nc]);
+                  }
+                }
+              }
+              if (borderColors.size === 1) {
+                const owner = borderColors.values().next().value;
+                if (owner === "black") {
+                  this.ctx.fillStyle = "rgba(0, 0, 255, 0.3)";
+                } else if (owner === "white") {
+                  this.ctx.fillStyle = "rgba(255, 0, 0, 0.3)";
+                }
+                for (const stone of region) {
+                  this.ctx.fillRect(margin + stone.col * size, margin + stone.row * size, size, size);
+                }
+              }
+            }
+          }
+        }
+      };
+    }
+  });
+
   // src/GameRegistry.ts
   var GameRegistry;
   var init_GameRegistry = __esm({
@@ -4638,6 +5271,7 @@
       init_PacmanGame();
       init_MahjongGame();
       init_KatakisGame();
+      init_GoGame();
       GameRegistry = class {
         constructor() {
           this.activeGameId = null;
@@ -4653,7 +5287,8 @@
             ["towerDefense", new TowerDefenseGame()],
             ["pacman", new PacmanGame()],
             ["mahjong", new MahjongGame()],
-            ["katakis", new KatakisGame()]
+            ["katakis", new KatakisGame()],
+            ["go", new GoGame()]
           ]);
           this.setupGameSwitching();
           this.setupKeyboardHandler();
@@ -4675,7 +5310,8 @@
             "towerDefense",
             "pacman",
             "mahjong",
-            "katakis"
+            "katakis",
+            "go"
           ];
           for (const gameId of gameIds) {
             const btn = document.getElementById(`btn${this.getPascalCase(gameId)}`);
@@ -4697,7 +5333,9 @@
             "towerDefense": "TowerDefense",
             "pacman": "Pacman",
             "mahjong": "Mahjong",
-            "katakis": "Katakis"
+            "katakis": "Katakis",
+            "go": "Go",
+            "flappyBird": "FlappyBird"
           };
           return map[gameId];
         }
@@ -4714,7 +5352,9 @@
             "towerDefense": "tdContainer",
             "pacman": "pacmanContainer",
             "mahjong": "mahjongContainer",
-            "katakis": "katakisContainer"
+            "katakis": "katakisContainer",
+            "go": "goContainer",
+            "flappyBird": "flappyBirdContainer"
           };
           return map[gameId];
         }
@@ -4731,7 +5371,9 @@
             "towerDefense": "btnTowerDefense",
             "pacman": "btnPacman",
             "mahjong": "btnMahjong",
-            "katakis": "btnKatakis"
+            "katakis": "btnKatakis",
+            "go": "btnGo",
+            "flappyBird": "btnFlappyBird"
           };
           return map[gameId];
         }

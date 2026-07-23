@@ -57,6 +57,10 @@
                 <span class="btn-icon">🚀</span>
                 <span class="btn-label">Katakis</span>
             </button>
+            <button id="btnGo" class="game-grid-btn" data-game="go">
+                <span class="btn-icon">⭐</span>
+                <span class="btn-label">Go</span>
+            </button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -373,6 +377,29 @@
                     </div>
                 </div>
                 <p class="katakis-hint">Pfeiltasten / WASD: Bewegen | Leertaste: Schießen | F: Force-Modul umschalten</p>
+            </div>
+        </div>
+
+        <div id="goContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Go</h1>
+                <div class="controls">
+                    <div class="mode-selection">
+                        <label for="goMode">Modus:</label>
+                        <select id="goMode">
+                            <option value="2p">2 Spieler</option>
+                            <option value="1p">1 Spieler (vs Computer)</option>
+                        </select>
+                    </div>
+                    <button id="resetGoBtn">Neues Spiel</button>
+                    <button id="goPassBtn">Pasen</button>
+                    <button id="goUndoBtn">Zurück</button>
+                </div>
+                <div id="goStatus">Schwarz ist am Zug</div>
+                <div class="go-game-area">
+                    <canvas id="goCanvas" width="360" height="360"></canvas>
+                </div>
+                <p class="go-hint">Klicke auf ein Kreuzungsfeld, um einen Stein zu platzieren. Zwei aufeinanderfolgende Pässe beenden das Spiel.</p>
             </div>
         </div>
     </div>

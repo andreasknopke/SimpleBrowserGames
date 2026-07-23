@@ -11,6 +11,7 @@ import { TowerDefenseGame } from './games/TowerDefenseGame';
 import { PacmanGame } from './games/PacmanGame';
 import { MahjongGame } from './games/MahjongGame';
 import { KatakisGame } from './games/KatakisGame';
+import { GoGame } from './games/GoGame';
 
 export class GameRegistry {
     private games: Map<GameId, Game>;
@@ -30,6 +31,7 @@ export class GameRegistry {
             ['pacman', new PacmanGame()],
             ['mahjong', new MahjongGame()],
             ['katakis', new KatakisGame()],
+            ['go', new GoGame()],
         ]);
 
         this.setupGameSwitching();
@@ -45,7 +47,7 @@ export class GameRegistry {
         const gameIds: GameId[] = [
             'fourWins', 'minesweeper', 'tetris', 'snake', 'pong',
             'spaceInvaders', 'breakout', 'boulderDash', 'towerDefense', 'pacman',
-            'mahjong', 'katakis'
+            'mahjong', 'katakis', 'go'
         ];
 
         for (const gameId of gameIds) {
@@ -69,7 +71,9 @@ export class GameRegistry {
             'towerDefense': 'TowerDefense',
             'pacman': 'Pacman',
             'mahjong': 'Mahjong',
-            'katakis': 'Katakis'
+            'katakis': 'Katakis',
+            'go': 'Go',
+            'flappyBird': 'FlappyBird'
         };
         return map[gameId];
     }
@@ -87,7 +91,9 @@ export class GameRegistry {
             'towerDefense': 'tdContainer',
             'pacman': 'pacmanContainer',
             'mahjong': 'mahjongContainer',
-            'katakis': 'katakisContainer'
+            'katakis': 'katakisContainer',
+            'go': 'goContainer',
+            'flappyBird': 'flappyBirdContainer'
         };
         return map[gameId];
     }
@@ -105,7 +111,9 @@ export class GameRegistry {
             'towerDefense': 'btnTowerDefense',
             'pacman': 'btnPacman',
             'mahjong': 'btnMahjong',
-            'katakis': 'btnKatakis'
+            'katakis': 'btnKatakis',
+            'go': 'btnGo',
+            'flappyBird': 'btnFlappyBird'
         };
         return map[gameId];
     }
