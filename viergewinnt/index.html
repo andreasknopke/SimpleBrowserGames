@@ -61,6 +61,10 @@
                 <span class="btn-icon">⭐</span>
                 <span class="btn-label">Go</span>
             </button>
+            <button id="btnChess" class="game-grid-btn" data-game="chess">
+                <span class="btn-icon">♟</span>
+                <span class="btn-label">Schach</span>
+            </button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -400,6 +404,37 @@
                     <canvas id="goCanvas" width="360" height="360"></canvas>
                 </div>
                 <p class="go-hint">Klicke auf ein Kreuzungsfeld, um einen Stein zu platzieren. Zwei aufeinanderfolgende Pässe beenden das Spiel.</p>
+            </div>
+        </div>
+
+        <div id="chessContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Schach</h1>
+                <div class="controls">
+                    <div class="mode-selection">
+                        <label for="chessMode">Modus:</label>
+                        <select id="chessMode">
+                            <option value="2p">2 Spieler</option>
+                            <option value="1p">1 Spieler (vs Computer)</option>
+                        </select>
+                    </div>
+
+                    <div id="chessDifficultyContainer" class="difficulty-selection" style="display: none;">
+                        <label for="chessDifficulty">Schwierigkeit:</label>
+                        <select id="chessDifficulty">
+                            <option value="1">Leicht</option>
+                            <option value="2">Mittel</option>
+                            <option value="3">Schwer</option>
+                        </select>
+                    </div>
+
+                    <button id="resetChessBtn">Neues Spiel</button>
+                </div>
+                <div id="chessStatus">Weiß ist am Zug</div>
+                <div class="chess-game-area">
+                    <canvas id="chessCanvas" width="400" height="400"></canvas>
+                </div>
+                <p class="chess-hint">Klicke und ziehe einen Stein auf ein gültiges Zielfeld. Roher Wert: König, Dame, Turm, Läufer, Springer, Bauer.</p>
             </div>
         </div>
     </div>

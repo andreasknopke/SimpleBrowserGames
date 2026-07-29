@@ -12,6 +12,7 @@ import { PacmanGame } from './games/PacmanGame';
 import { MahjongGame } from './games/MahjongGame';
 import { KatakisGame } from './games/KatakisGame';
 import { GoGame } from './games/GoGame';
+import { ChessGame } from './games/ChessGame';
 
 export class GameRegistry {
     private games: Map<GameId, Game>;
@@ -32,6 +33,7 @@ export class GameRegistry {
             ['mahjong', new MahjongGame()],
             ['katakis', new KatakisGame()],
             ['go', new GoGame()],
+            ['chess', new ChessGame()],
         ]);
 
         this.setupGameSwitching();
@@ -47,7 +49,7 @@ export class GameRegistry {
         const gameIds: GameId[] = [
             'fourWins', 'minesweeper', 'tetris', 'snake', 'pong',
             'spaceInvaders', 'breakout', 'boulderDash', 'towerDefense', 'pacman',
-            'mahjong', 'katakis', 'go'
+            'mahjong', 'katakis', 'go', 'chess'
         ];
 
         for (const gameId of gameIds) {
@@ -73,6 +75,7 @@ export class GameRegistry {
             'mahjong': 'Mahjong',
             'katakis': 'Katakis',
             'go': 'Go',
+            'chess': 'Chess',
             'flappyBird': 'FlappyBird'
         };
         return map[gameId];
@@ -93,6 +96,7 @@ export class GameRegistry {
             'mahjong': 'mahjongContainer',
             'katakis': 'katakisContainer',
             'go': 'goContainer',
+            'chess': 'chessContainer',
             'flappyBird': 'flappyBirdContainer'
         };
         return map[gameId];
@@ -113,6 +117,7 @@ export class GameRegistry {
             'mahjong': 'btnMahjong',
             'katakis': 'btnKatakis',
             'go': 'btnGo',
+            'chess': 'btnChess',
             'flappyBird': 'btnFlappyBird'
         };
         return map[gameId];
