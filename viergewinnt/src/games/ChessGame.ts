@@ -311,7 +311,7 @@ export class ChessGame implements Game {
             this.updateStatus(`${winner === 'white' ? 'Weiß' : 'Schwarz'} hat Schachmatt!`);
         } else if (!opponentInCheck && !hasLegalMoves) {
             this.gameOver = true;
-            this.updateStatus('Unentschieden durch Stellungswiederholung (Patt)!');
+            this.updateStatus('Unentschieden (Patt)!');
         } else {
             this.updateStatus();
         }
@@ -367,7 +367,7 @@ export class ChessGame implements Game {
         return validMoves;
     }
 
-    private getPseudoLegalMoves(row: number, col: number): { row: number; col: number }[] {
+    private getPseudoLegalMoves(row: number, col: number, includeCastling: boolean = true): { row: number; col: number }[] {
         const piece = this.board[row][col];
         if (!piece) return [];
 
@@ -390,7 +390,7 @@ export class ChessGame implements Game {
                 this.getQueenMoves(row, col, piece, moves);
                 break;
             case 'king':
-                this.getKingMoves(row, col, piece, moves);
+                this.getKingMoves(row, col, piece, moves, includeCastling);
                 break;
         }
 
@@ -488,7 +488,7 @@ export class ChessGame implements Game {
         }
     }
 
-    private getKingMoves(row: number, col: number, piece: ChessPiece, moves: { row: number; col: number }[]): void {
+    private getKingMoves(row: number, col: number, piece: ChessPiece, moves: { row: number; col: number }[], includeCastling: boolean = true): void {
         const directions: [number, number][] = [
             [-1, -1], [-1, 0], [-1, 1],
             [0, -1], [0, 1],
@@ -506,7 +506,9 @@ export class ChessGame implements Game {
             }
         }
 
-        // Castling
+        // Castling (skip when called from isSquareAttacked to avoid infinite recursion)
+        if (!includeCastling) return;
+
         if (piece.color === 'white' && !this.whiteKingMoved && row === 7 && col === 4) {
             // Kingside
             if (!this.whiteRookHMoved && this.board[7][5] === null && this.board[7][6] === null && this.board[7][7] !== null) {
@@ -551,7 +553,7 @@ export class ChessGame implements Game {
             for (let c = 0; c < this.BOARD_SIZE; c++) {
                 const piece = this.board[r][c];
                 if (piece && piece.color === byColor) {
-                    const moves = this.getPseudoLegalMoves(r, c);
+                    const moves = this.getPseudoLegalMoves(r, c, false);
                     if (moves.some(m => m.row === row && m.col === col)) {
                         return true;
                     }

@@ -5496,7 +5496,7 @@
             this.updateStatus(`${winner === "white" ? "Wei\xDF" : "Schwarz"} hat Schachmatt!`);
           } else if (!opponentInCheck && !hasLegalMoves) {
             this.gameOver = true;
-            this.updateStatus("Unentschieden durch Stellungswiederholung (Patt)!");
+            this.updateStatus("Unentschieden (Patt)!");
           } else {
             this.updateStatus();
           }
@@ -5537,7 +5537,7 @@
           }
           return validMoves;
         }
-        getPseudoLegalMoves(row, col) {
+        getPseudoLegalMoves(row, col, includeCastling = true) {
           const piece = this.board[row][col];
           if (!piece) return [];
           const moves = [];
@@ -5558,7 +5558,7 @@
               this.getQueenMoves(row, col, piece, moves);
               break;
             case "king":
-              this.getKingMoves(row, col, piece, moves);
+              this.getKingMoves(row, col, piece, moves, includeCastling);
               break;
           }
           return moves;
@@ -5652,7 +5652,7 @@
             }
           }
         }
-        getKingMoves(row, col, piece, moves) {
+        getKingMoves(row, col, piece, moves, includeCastling = true) {
           const directions = [
             [-1, -1],
             [-1, 0],
@@ -5673,6 +5673,7 @@
               }
             }
           }
+          if (!includeCastling) return;
           if (piece.color === "white" && !this.whiteKingMoved && row === 7 && col === 4) {
             if (!this.whiteRookHMoved && this.board[7][5] === null && this.board[7][6] === null && this.board[7][7] !== null) {
               if (!this.isSquareAttacked(7, 4, "black") && !this.isSquareAttacked(7, 5, "black") && !this.isSquareAttacked(7, 6, "black")) {
@@ -5703,7 +5704,7 @@
             for (let c = 0; c < this.BOARD_SIZE; c++) {
               const piece = this.board[r][c];
               if (piece && piece.color === byColor) {
-                const moves = this.getPseudoLegalMoves(r, c);
+                const moves = this.getPseudoLegalMoves(r, c, false);
                 if (moves.some((m) => m.row === row && m.col === col)) {
                   return true;
                 }
