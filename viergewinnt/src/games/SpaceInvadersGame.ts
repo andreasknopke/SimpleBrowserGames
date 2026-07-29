@@ -19,6 +19,11 @@ export class SpaceInvadersGame implements Game {
 
     private spaceInvadersInterval: ReturnType<typeof setInterval> | undefined;
     private siPlayerX: number = 220;
+
+    // Input state for smooth movement
+    private keysPressed: Set<string> = new Set();
+    private canShoot: boolean = true;  // Shooting cooldown flag
+
     private siBullets: Bullet[] = [];
     private siAliens: Alien[] = [];
     private siAlienBullets: Bullet[] = [];
@@ -99,31 +104,43 @@ export class SpaceInvadersGame implements Game {
     }
 
     public handleKeyDown(e: KeyboardEvent): void {
-        if (!this.spaceInvadersCanvas) return;
-        if (e.key === 'ArrowLeft' || e.key === 'a') {
-            this.siPlayerX = Math.max(0, this.siPlayerX - 15);
-        }
-        if (e.key === 'ArrowRight' || e.key === 'd') {
-            this.siPlayerX = Math.min(this.spaceInvadersCanvas.width - this.SI_PLAYER_WIDTH, this.siPlayerX + 15);
-        }
-        if (e.key === ' ' || e.key === 'Space') {
-            if (this.siBullets.length < 3) {
-                this.siBullets.push({
-                    x: this.siPlayerX + this.SI_PLAYER_WIDTH / 2 - this.SI_BULLET_WIDTH / 2,
-                    y: this.spaceInvadersCanvas.height - 38
-                });
-            }
-        }
-        e.preventDefault();
+        if (!this.spaceInvadersCanvas || this.siGameOver) return;
+        this.keysPressed.add(e.key);
+        if (e.key === ' ') e.preventDefault();
     }
 
-    public handleKeyUp(_e: KeyboardEvent): void {
-        // No-op for space invaders
+    public handleKeyUp(e: KeyboardEvent): void {
+        this.keysPressed.delete(e.key);
+
+        // Reset shoot cooldown when space/z is released (allows rapid firing by tapping)
+        if (e.key === ' ' || e.key === 'z' || e.key === 'Z') {
+            this.canShoot = true;
+        }
     }
 
     private update(): void {
         if (this.siGameOver) return;
 
+        // Smooth player movement based on key state
+        const moveSpeed = 4;
+        if (this.keysPressed.has('ArrowLeft') || this.keysPressed.has('a')) {
+            this.siPlayerX = Math.max(0, this.siPlayerX - moveSpeed);
+        }
+        if (this.keysPressed.has('ArrowRight') || this.keysPressed.has('d')) {
+            this.siPlayerX = Math.min(this.spaceInvadersCanvas ? this.spaceInvadersCanvas.width - this.SI_PLAYER_WIDTH : 0, this.siPlayerX + moveSpeed);
+        }
+
+        // Shooting with spacebar or Z key (one shot per press)
+        if ((this.keysPressed.has(' ') || this.keysPressed.has('z') || this.keysPressed.has('Z')) && this.canShoot && this.siBullets.length < 3) {
+            if (this.spaceInvadersCanvas) {
+                this.siBullets.push({
+                    x: this.siPlayerX + this.SI_PLAYER_WIDTH / 2 - this.SI_BULLET_WIDTH / 2,
+                    y: this.spaceInvadersCanvas.height - 38
+                });
+                this.canShoot = false;  // Prevent continuous firing
+            }
+        }
+        // Alien movement timer logic
         this.siAlienMoveTimer++;
         if (this.siAlienMoveTimer >= this.siAlienMoveInterval) {
             this.siAlienMoveTimer = 0;
@@ -276,11 +293,12 @@ export class SpaceInvadersGame implements Game {
             if (!this.siGameOver) this.siPlayerX = Math.min(this.spaceInvadersCanvas ? this.spaceInvadersCanvas.width - this.SI_PLAYER_WIDTH : 0, this.siPlayerX + 15);
         });
         addControl(this.spaceInvadersBtnShoot, () => {
-            if (!this.siGameOver && this.siBullets.length < 3 && this.spaceInvadersCanvas) {
+            if (!this.siGameOver && this.canShoot && this.siBullets.length < 3 && this.spaceInvadersCanvas) {
                 this.siBullets.push({
                     x: this.siPlayerX + this.SI_PLAYER_WIDTH / 2 - this.SI_BULLET_WIDTH / 2,
                     y: this.spaceInvadersCanvas.height - 38
                 });
+                this.canShoot = false;  // Prevent continuous firing
             }
         });
     }

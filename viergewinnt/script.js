@@ -1158,6 +1158,10 @@
           this.SI_ALIEN_BULLET_WIDTH = 3;
           this.SI_ALIEN_BULLET_HEIGHT = 8;
           this.siPlayerX = 220;
+          // Input state for smooth movement
+          this.keysPressed = /* @__PURE__ */ new Set();
+          this.canShoot = true;
+          // Shooting cooldown flag
           this.siBullets = [];
           this.siAliens = [];
           this.siAlienBullets = [];
@@ -1226,27 +1230,34 @@
           }
         }
         handleKeyDown(e) {
-          if (!this.spaceInvadersCanvas) return;
-          if (e.key === "ArrowLeft" || e.key === "a") {
-            this.siPlayerX = Math.max(0, this.siPlayerX - 15);
+          if (!this.spaceInvadersCanvas || this.siGameOver) return;
+          this.keysPressed.add(e.key);
+          if (e.key === " ") e.preventDefault();
+        }
+        handleKeyUp(e) {
+          this.keysPressed.delete(e.key);
+          if (e.key === " " || e.key === "z" || e.key === "Z") {
+            this.canShoot = true;
           }
-          if (e.key === "ArrowRight" || e.key === "d") {
-            this.siPlayerX = Math.min(this.spaceInvadersCanvas.width - this.SI_PLAYER_WIDTH, this.siPlayerX + 15);
+        }
+        update() {
+          if (this.siGameOver) return;
+          const moveSpeed = 4;
+          if (this.keysPressed.has("ArrowLeft") || this.keysPressed.has("a")) {
+            this.siPlayerX = Math.max(0, this.siPlayerX - moveSpeed);
           }
-          if (e.key === " " || e.key === "Space") {
-            if (this.siBullets.length < 3) {
+          if (this.keysPressed.has("ArrowRight") || this.keysPressed.has("d")) {
+            this.siPlayerX = Math.min(this.spaceInvadersCanvas ? this.spaceInvadersCanvas.width - this.SI_PLAYER_WIDTH : 0, this.siPlayerX + moveSpeed);
+          }
+          if ((this.keysPressed.has(" ") || this.keysPressed.has("z") || this.keysPressed.has("Z")) && this.canShoot && this.siBullets.length < 3) {
+            if (this.spaceInvadersCanvas) {
               this.siBullets.push({
                 x: this.siPlayerX + this.SI_PLAYER_WIDTH / 2 - this.SI_BULLET_WIDTH / 2,
                 y: this.spaceInvadersCanvas.height - 38
               });
+              this.canShoot = false;
             }
           }
-          e.preventDefault();
-        }
-        handleKeyUp(_e) {
-        }
-        update() {
-          if (this.siGameOver) return;
           this.siAlienMoveTimer++;
           if (this.siAlienMoveTimer >= this.siAlienMoveInterval) {
             this.siAlienMoveTimer = 0;
@@ -1382,11 +1393,12 @@
             if (!this.siGameOver) this.siPlayerX = Math.min(this.spaceInvadersCanvas ? this.spaceInvadersCanvas.width - this.SI_PLAYER_WIDTH : 0, this.siPlayerX + 15);
           });
           addControl(this.spaceInvadersBtnShoot, () => {
-            if (!this.siGameOver && this.siBullets.length < 3 && this.spaceInvadersCanvas) {
+            if (!this.siGameOver && this.canShoot && this.siBullets.length < 3 && this.spaceInvadersCanvas) {
               this.siBullets.push({
                 x: this.siPlayerX + this.SI_PLAYER_WIDTH / 2 - this.SI_BULLET_WIDTH / 2,
                 y: this.spaceInvadersCanvas.height - 38
               });
+              this.canShoot = false;
             }
           });
         }
