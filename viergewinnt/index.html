@@ -65,6 +65,10 @@
                 <span class="btn-icon">♟</span>
                 <span class="btn-label">Schach</span>
             </button>
+            <button id="btnMoorhuhn" class="game-grid-btn" data-game="moorhuhn">
+                <span class="btn-icon">🦆</span>
+                <span class="btn-label">Moorhuhn</span>
+            </button>
         </div>
 
         <div id="fourWinsContainer" class="game-container">
@@ -435,6 +439,20 @@
                     <canvas id="chessCanvas" width="400" height="400"></canvas>
                 </div>
                 <p class="chess-hint">Klicke und ziehe einen Stein auf ein gültiges Zielfeld. Roher Wert: König, Dame, Turm, Läufer, Springer, Bauer.</p>
+            </div>
+        </div>
+
+        <div id="moorhuhnContainer" class="game-container" style="display: none;">
+            <div class="container">
+                <h1>Moorhuhn</h1>
+                <div class="controls">
+                    <button id="resetMoorhuhnBtn">Neues Spiel</button>
+                </div>
+                <div id="moorhuhnStatus">Punkte: 0 | Treffer: 0/0 | ⏱ 60s</div>
+                <div class="moorhuhn-game-area">
+                    <canvas id="moorhuhnCanvas" width="640" height="400"></canvas>
+                </div>
+                <p class="moorhuhn-hint">Klicke auf die Tiere, um sie zu treffen! Jeder verpasste Schuss kostet 5 Punkte. Du hast 60 Sekunden Zeit.</p>
             </div>
         </div>
     </div>

@@ -13,6 +13,7 @@ import { MahjongGame } from './games/MahjongGame';
 import { KatakisGame } from './games/KatakisGame';
 import { GoGame } from './games/GoGame';
 import { ChessGame } from './games/ChessGame';
+import { MoorhuhnGame } from './games/MoorhuhnGame';
 
 export class GameRegistry {
     private games: Map<GameId, Game>;
@@ -34,6 +35,7 @@ export class GameRegistry {
             ['katakis', new KatakisGame()],
             ['go', new GoGame()],
             ['chess', new ChessGame()],
+            ['moorhuhn', new MoorhuhnGame()],
         ]);
 
         this.setupGameSwitching();
@@ -49,7 +51,7 @@ export class GameRegistry {
         const gameIds: GameId[] = [
             'fourWins', 'minesweeper', 'tetris', 'snake', 'pong',
             'spaceInvaders', 'breakout', 'boulderDash', 'towerDefense', 'pacman',
-            'mahjong', 'katakis', 'go', 'chess'
+            'mahjong', 'katakis', 'go', 'chess', 'moorhuhn'
         ];
 
         for (const gameId of gameIds) {
@@ -76,7 +78,7 @@ export class GameRegistry {
             'katakis': 'Katakis',
             'go': 'Go',
             'chess': 'Chess',
-            'flappyBird': 'FlappyBird'
+            'moorhuhn': 'Moorhuhn'
         };
         return map[gameId];
     }
@@ -97,7 +99,7 @@ export class GameRegistry {
             'katakis': 'katakisContainer',
             'go': 'goContainer',
             'chess': 'chessContainer',
-            'flappyBird': 'flappyBirdContainer'
+            'moorhuhn': 'moorhuhnContainer'
         };
         return map[gameId];
     }
@@ -118,7 +120,7 @@ export class GameRegistry {
             'katakis': 'btnKatakis',
             'go': 'btnGo',
             'chess': 'btnChess',
-            'flappyBird': 'btnFlappyBird'
+            'moorhuhn': 'btnMoorhuhn'
         };
         return map[gameId];
     }

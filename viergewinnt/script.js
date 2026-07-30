@@ -5976,6 +5976,388 @@
     }
   });
 
+  // src/games/MoorhuhnGame.ts
+  var MoorhuhnGame;
+  var init_MoorhuhnGame = __esm({
+    "src/games/MoorhuhnGame.ts"() {
+      "use strict";
+      MoorhuhnGame = class {
+        constructor() {
+          this.id = "moorhuhn";
+          this.MOORHUEHN_WIDTH = 640;
+          this.MOORHUEHN_HEIGHT = 400;
+          this.TARGET_RADIUS_MIN = 14;
+          this.TARGET_RADIUS_MAX = 22;
+          this.DUCK_SPEED_MIN = 0.6;
+          this.DUCK_SPEED_MAX = 2;
+          this.SPAWN_INTERVAL_MS = 1200;
+          this.GAME_DURATION_SEC = 60;
+          this.moorhuhnLastTime = 0;
+          this.moorhuhnsTargets = [];
+          this.moorhuhnParticles = [];
+          this.moorhuhnScore = 0;
+          this.moorhuhnShots = 0;
+          this.moorhuhnHits = 0;
+          this.moorhuhnGameOver = false;
+          this.moorhuhnTimeRemaining = this.GAME_DURATION_SEC;
+          this.moorhuhnSpawnTimer = 0;
+          this.resetMoorhuhnBtn = null;
+          this.moorhuhnCanvas = null;
+          this.moorhuhnStatusElement = null;
+          this.moorhuhnCtx = null;
+          this.moorhuhnCanvas = document.getElementById("moorhuhnCanvas");
+          this.moorhuhnStatusElement = document.getElementById("moorhuhnStatus");
+          this.resetMoorhuhnBtn = document.getElementById("resetMoorhuhnBtn");
+          this.moorhuhnCtx = this.moorhuhnCanvas ? this.moorhuhnCanvas.getContext("2d") : null;
+          this.setupEventListeners();
+          this.setupMouseControl();
+        }
+        setupEventListeners() {
+          if (this.resetMoorhuhnBtn) {
+            this.resetMoorhuhnBtn.addEventListener("click", () => this.init());
+          }
+        }
+        setupMouseControl() {
+          if (this.moorhuhnCanvas) {
+            this.moorhuhnCanvas.addEventListener("mousedown", (e) => {
+              if (this.moorhuhnGameOver) return;
+              const rect = this.moorhuhnCanvas.getBoundingClientRect();
+              const mouseX = e.clientX - rect.left;
+              const mouseY = e.clientY - rect.top;
+              this.shoot(mouseX, mouseY);
+            });
+          }
+        }
+        spawnTarget() {
+          const directions = ["left", "right"];
+          const direction = directions[Math.floor(Math.random() * directions.length)];
+          const sideMargin = 30;
+          const startY = 80 + Math.random() * (this.MOORHUEHN_HEIGHT - 180);
+          const kindRoll = Math.random();
+          let kind;
+          let radius;
+          let speed;
+          let color;
+          if (kindRoll < 0.5) {
+            kind = "duck";
+            radius = 16 + Math.random() * 4;
+            speed = this.DUCK_SPEED_MIN + Math.random() * (this.DUCK_SPEED_MAX - this.DUCK_SPEED_MIN);
+            color = "#4CAF50";
+          } else if (kindRoll < 0.85) {
+            kind = "rabbit";
+            radius = 18 + Math.random() * 4;
+            speed = this.DUCK_SPEED_MIN + 0.3 + Math.random() * (this.DUCK_SPEED_MAX - this.DUCK_SPEED_MIN);
+            color = "#FF9800";
+          } else {
+            kind = "pheasant";
+            radius = 20 + Math.random() * 2;
+            speed = this.DUCK_SPEED_MIN + 0.5 + Math.random() * (this.DUCK_SPEED_MAX - this.DUCK_SPEED_MIN);
+            color = "#E91E63";
+          }
+          const startX = direction === "left" ? -radius - 10 : this.MOORHUEHN_WIDTH + radius + 10;
+          const vx = direction === "left" ? speed : -speed;
+          const vy = (Math.random() - 0.5) * 0.6;
+          this.moorhuhnsTargets.push({
+            x: startX,
+            y: startY,
+            vx,
+            vy,
+            radius,
+            alive: true,
+            kind,
+            hitAnim: 0
+          });
+          void color;
+        }
+        shoot(x, y) {
+          this.moorhuhnShots++;
+          let hitSomething = false;
+          for (const target of this.moorhuhnsTargets) {
+            if (!target.alive) continue;
+            const dx = target.x - x;
+            const dy = target.y - y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq <= target.radius * target.radius) {
+              target.alive = false;
+              target.hitAnim = 12;
+              this.moorhuhnHits++;
+              hitSomething = true;
+              this.createHitEffect(target.x, target.y, target.kind);
+              const points = this.pointsForKind(target.kind);
+              this.moorhuhnScore += points;
+              if (this.moorhuhnStatusElement) {
+                this.moorhuhnStatusElement.textContent = `Punkte: ${this.moorhuhnScore} | Treffer: ${this.moorhuhnHits}/${this.moorhuhnShots} | \u23F1 ${Math.ceil(this.moorhuhnTimeRemaining)}s`;
+              }
+              break;
+            }
+          }
+          if (!hitSomething) {
+            this.moorhuhnScore = Math.max(0, this.moorhuhnScore - 5);
+            if (this.moorhuhnStatusElement) {
+              this.moorhuhnStatusElement.textContent = `Punkte: ${this.moorhuhnScore} | Treffer: ${this.moorhuhnHits}/${this.moorhuhnShots} | \u23F1 ${Math.ceil(this.moorhuhnTimeRemaining)}s`;
+            }
+          }
+        }
+        pointsForKind(kind) {
+          switch (kind) {
+            case "duck":
+              return 10;
+            case "rabbit":
+              return 25;
+            case "pheasant":
+              return 50;
+            default:
+              return 10;
+          }
+        }
+        createHitEffect(x, y, kind) {
+          let color;
+          switch (kind) {
+            case "duck":
+              color = "#4CAF50";
+              break;
+            case "rabbit":
+              color = "#FF9800";
+              break;
+            case "pheasant":
+              color = "#E91E63";
+              break;
+            default:
+              color = "#fff";
+          }
+          const particleCount = 8 + Math.floor(Math.random() * 6);
+          for (let i = 0; i < particleCount; i++) {
+            const angle = Math.PI * 2 * i / particleCount + Math.random() * 0.3;
+            const speed = 1 + Math.random() * 3;
+            this.moorhuhnParticles.push({
+              x,
+              y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              life: 18 + Math.random() * 8,
+              color
+            });
+          }
+        }
+        init() {
+          if (this.moorhuhnInterval) clearInterval(this.moorhuhnInterval);
+          if (this.moorhuhnAnimationFrame) cancelAnimationFrame(this.moorhuhnAnimationFrame);
+          if (!this.moorhuhnCanvas) return;
+          this.moorhuhnsTargets = [];
+          this.moorhuhnParticles = [];
+          this.moorhuhnScore = 0;
+          this.moorhuhnShots = 0;
+          this.moorhuhnHits = 0;
+          this.moorhuhnGameOver = false;
+          this.moorhuhnTimeRemaining = this.GAME_DURATION_SEC;
+          this.moorhuhnSpawnTimer = 0;
+          this.moorhuhnLastTime = 0;
+          if (this.moorhuhnStatusElement) {
+            this.moorhuhnStatusElement.textContent = `Punkte: 0 | Treffer: 0/0 | \u23F1 ${this.GAME_DURATION_SEC}s`;
+          }
+          this.spawnTarget();
+          this.moorhuhnLastTime = performance.now();
+          this.moorhuhnLoop(this.moorhuhnLastTime);
+        }
+        cleanup() {
+          if (this.moorhuhnInterval) {
+            clearInterval(this.moorhuhnInterval);
+            this.moorhuhnInterval = void 0;
+          }
+          if (this.moorhuhnAnimationFrame) {
+            cancelAnimationFrame(this.moorhuhnAnimationFrame);
+            this.moorhuhnAnimationFrame = void 0;
+          }
+        }
+        moorhuhnLoop(timestamp) {
+          if (!this.moorhuhnCanvas || !this.moorhuhnCtx) return;
+          const deltaSec = (timestamp - this.moorhuhnLastTime) / 1e3;
+          this.moorhuhnLastTime = timestamp;
+          this.update(deltaSec);
+          this.draw();
+          if (!this.moorhuhnGameOver) {
+            this.moorhuhnAnimationFrame = requestAnimationFrame(this.moorhuhnLoop.bind(this));
+          }
+        }
+        update(deltaSec) {
+          if (this.moorhuhnGameOver) return;
+          this.moorhuhnTimeRemaining -= deltaSec;
+          if (this.moorhuhnTimeRemaining <= 0) {
+            this.moorhuhnTimeRemaining = 0;
+            this.endGame();
+            return;
+          }
+          this.moorhuhnSpawnTimer += deltaSec * 1e3;
+          if (this.moorhuhnSpawnTimer >= this.SPAWN_INTERVAL_MS) {
+            this.moorhuhnSpawnTimer -= this.SPAWN_INTERVAL_MS;
+            this.spawnTarget();
+          }
+          for (const target of this.moorhuhnsTargets) {
+            if (!target.alive) {
+              if (target.hitAnim > 0) target.hitAnim--;
+              continue;
+            }
+            target.x += target.vx;
+            target.y += target.vy;
+            if (target.y < this.TARGET_RADIUS_MIN || target.y > this.MOORHUEHN_HEIGHT - this.TARGET_RADIUS_MIN) {
+              target.vy *= -1;
+              target.y = target.y < this.TARGET_RADIUS_MIN ? this.TARGET_RADIUS_MIN : this.MOORHUEHN_HEIGHT - this.TARGET_RADIUS_MIN;
+            }
+            if (target.x + target.radius < 0 || target.x - target.radius > this.MOORHUEHN_WIDTH) {
+              target.alive = false;
+            }
+          }
+          this.moorhuhnsTargets = this.moorhuhnsTargets.filter((t) => t.alive || t.hitAnim > 0);
+          for (let i = this.moorhuhnParticles.length - 1; i >= 0; i--) {
+            const p = this.moorhuhnParticles[i];
+            p.life -= deltaSec * 60;
+            if (p.life <= 0) {
+              this.moorhuhnParticles.splice(i, 1);
+            } else {
+              p.vy += 0.15;
+              p.x += p.vx;
+              p.y += p.vy;
+            }
+          }
+        }
+        draw() {
+          if (!this.moorhuhnCtx || !this.moorhuhnCanvas) return;
+          const ctx = this.moorhuhnCtx;
+          ctx.clearRect(0, 0, this.MOORHUEHN_WIDTH, this.MOORHUEHN_HEIGHT);
+          ctx.fillStyle = "#2ecc71";
+          ctx.fillRect(0, 0, this.MOORHUEHN_WIDTH, this.MOORHUEHN_HEIGHT);
+          ctx.strokeStyle = "#27ae60";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(0, 0, this.MOORHUEHN_WIDTH, this.MOORHUEHN_HEIGHT);
+          for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(60 + i * 220, this.MOORHUEHN_HEIGHT - 30, 8, 0, Math.PI * 2);
+            ctx.fillStyle = "#27ae60";
+            ctx.fill();
+          }
+          for (const target of this.moorhuhnsTargets) {
+            this.drawTarget(ctx, target);
+          }
+          for (const p of this.moorhuhnParticles) {
+            ctx.globalAlpha = Math.max(0, p.life / 30);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+        drawTarget(ctx, target) {
+          ctx.save();
+          ctx.translate(target.x, target.y);
+          if (target.hitAnim > 0) {
+            ctx.globalAlpha = target.hitAnim / 12;
+          }
+          ctx.fillStyle = "#fff";
+          ctx.beginPath();
+          ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#000";
+          ctx.lineWidth = 1.5;
+          switch (target.kind) {
+            case "duck":
+              ctx.fillStyle = "#4CAF50";
+              ctx.beginPath();
+              ctx.arc(-target.radius * 0.3, -target.radius * 0.2, target.radius * 0.35, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.beginPath();
+              ctx.arc(target.radius * 0.3, -target.radius * 0.2, target.radius * 0.35, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = "#FFC107";
+              ctx.beginPath();
+              ctx.moveTo(-target.radius * 0.15, -target.radius * 0.1);
+              ctx.lineTo(-target.radius * 0.05, target.radius * 0.15);
+              ctx.lineTo(target.radius * 0.05, -target.radius * 0.1);
+              ctx.closePath();
+              ctx.fill();
+              ctx.fillStyle = "#212121";
+              ctx.beginPath();
+              ctx.arc(-target.radius * 0.3, -target.radius * 0.3, target.radius * 0.12, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.beginPath();
+              ctx.arc(target.radius * 0.3, -target.radius * 0.3, target.radius * 0.12, 0, Math.PI * 2);
+              ctx.fill();
+              break;
+            case "rabbit":
+              ctx.fillStyle = "#FF9800";
+              ctx.beginPath();
+              ctx.arc(0, 0, target.radius * 0.7, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = "#FFFFFF";
+              ctx.beginPath();
+              ctx.arc(-target.radius * 0.35, -target.radius * 0.15, target.radius * 0.2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.beginPath();
+              ctx.arc(target.radius * 0.35, -target.radius * 0.15, target.radius * 0.2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = "#212121";
+              ctx.beginPath();
+              ctx.arc(-target.radius * 0.35, -target.radius * 0.25, target.radius * 0.08, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.beginPath();
+              ctx.arc(target.radius * 0.35, -target.radius * 0.25, target.radius * 0.08, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = "#FF9800";
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(-target.radius * 0.55, target.radius * 0.2, target.radius * 0.18, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.beginPath();
+              ctx.arc(target.radius * 0.55, target.radius * 0.2, target.radius * 0.18, 0, Math.PI * 2);
+              ctx.stroke();
+              break;
+            case "pheasant":
+              ctx.fillStyle = "#E91E63";
+              ctx.beginPath();
+              ctx.ellipse(0, 0, target.radius * 0.75, target.radius * 0.55, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = "#FFD700";
+              ctx.beginPath();
+              ctx.moveTo(-target.radius * 0.3, -target.radius * 0.4);
+              ctx.lineTo(-target.radius * 0.1, -target.radius * 0.65);
+              ctx.lineTo(target.radius * 0.1, -target.radius * 0.55);
+              ctx.closePath();
+              ctx.fill();
+              ctx.fillStyle = "#FFFFFF";
+              ctx.beginPath();
+              ctx.arc(-target.radius * 0.3, -target.radius * 0.15, target.radius * 0.18, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.beginPath();
+              ctx.arc(target.radius * 0.3, -target.radius * 0.15, target.radius * 0.18, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = "#212121";
+              ctx.beginPath();
+              ctx.arc(-target.radius * 0.3, -target.radius * 0.22, target.radius * 0.08, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.beginPath();
+              ctx.arc(target.radius * 0.3, -target.radius * 0.22, target.radius * 0.08, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = "#BA68C8";
+              ctx.beginPath();
+              ctx.moveTo(0, target.radius * 0.55);
+              ctx.lineTo(-target.radius * 0.3, target.radius * 0.8);
+              ctx.lineTo(target.radius * 0.3, target.radius * 0.8);
+              ctx.closePath();
+              ctx.fill();
+              break;
+          }
+          ctx.restore();
+        }
+        endGame() {
+          this.moorhuhnGameOver = true;
+          if (this.moorhuhnStatusElement) {
+            this.moorhuhnStatusElement.textContent = `Zeit um! Punkte: ${this.moorhuhnScore} | Treffer: ${this.moorhuhnHits}/${this.moorhuhnShots}`;
+          }
+        }
+      };
+    }
+  });
+
   // src/GameRegistry.ts
   var GameRegistry;
   var init_GameRegistry = __esm({
@@ -5995,6 +6377,7 @@
       init_KatakisGame();
       init_GoGame();
       init_ChessGame();
+      init_MoorhuhnGame();
       GameRegistry = class {
         constructor() {
           this.activeGameId = null;
@@ -6012,7 +6395,8 @@
             ["mahjong", new MahjongGame()],
             ["katakis", new KatakisGame()],
             ["go", new GoGame()],
-            ["chess", new ChessGame()]
+            ["chess", new ChessGame()],
+            ["moorhuhn", new MoorhuhnGame()]
           ]);
           this.setupGameSwitching();
           this.setupKeyboardHandler();
@@ -6036,7 +6420,8 @@
             "mahjong",
             "katakis",
             "go",
-            "chess"
+            "chess",
+            "moorhuhn"
           ];
           for (const gameId of gameIds) {
             const btn = document.getElementById(`btn${this.getPascalCase(gameId)}`);
@@ -6061,7 +6446,7 @@
             "katakis": "Katakis",
             "go": "Go",
             "chess": "Chess",
-            "flappyBird": "FlappyBird"
+            "moorhuhn": "Moorhuhn"
           };
           return map[gameId];
         }
@@ -6081,7 +6466,7 @@
             "katakis": "katakisContainer",
             "go": "goContainer",
             "chess": "chessContainer",
-            "flappyBird": "flappyBirdContainer"
+            "moorhuhn": "moorhuhnContainer"
           };
           return map[gameId];
         }
@@ -6101,7 +6486,7 @@
             "katakis": "btnKatakis",
             "go": "btnGo",
             "chess": "btnChess",
-            "flappyBird": "btnFlappyBird"
+            "moorhuhn": "btnMoorhuhn"
           };
           return map[gameId];
         }
