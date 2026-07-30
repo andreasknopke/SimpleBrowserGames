@@ -107,7 +107,6 @@ export class MoorhuhnGame implements Game {
 
         const startX: number = direction === 'left' ? -radius - 10 : this.MOORHUEHN_WIDTH + radius + 10;
         const vx: number = direction === 'left' ? speed : -speed;
-        void vy;
         const vy: number = (Math.random() - 0.5) * 0.6;
 
         this.moorhuhnsTargets.push({
@@ -120,7 +119,6 @@ export class MoorhuhnGame implements Game {
             kind,
             hitAnim: 0,
         });
-        void color;
     }
 
     private shoot(x: number, y: number): void {
