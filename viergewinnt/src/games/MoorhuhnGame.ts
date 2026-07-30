@@ -105,7 +105,7 @@ export class MoorhuhnGame implements Game {
             color = '#E91E63';
         }
 
-        const startX: number = direction === 'left' ? -radius - 10 : this.MOORHUEHN_WIDTH + radius + 10;
+        const startX: number = direction === 'left' ? -radius : this.MOORHUEHN_WIDTH + radius;
         const vx: number = direction === 'left' ? speed : -speed;
         const vy: number = (Math.random() - 0.5) * 0.6;
 
@@ -238,6 +238,10 @@ export class MoorhuhnGame implements Game {
         if (this.moorhuhnGameOver) return;
 
         this.moorhuhnTimeRemaining -= deltaSec;
+        // Status-Text jedes Frame aktualisieren (Countdown, Punkte)
+        if (this.moorhuhnStatusElement && !this.moorhuhnGameOver) {
+            this.moorhuhnStatusElement.textContent = `Punkte: ${this.moorhuhnScore} | Treffer: ${this.moorhuhnHits}/${this.moorhuhnShots} | ⏱ ${Math.ceil(this.moorhuhnTimeRemaining)}s`;
+        }
         if (this.moorhuhnTimeRemaining <= 0) {
             this.moorhuhnTimeRemaining = 0;
             this.endGame();

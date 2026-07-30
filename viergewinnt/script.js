@@ -5990,7 +5990,7 @@
           this.TARGET_RADIUS_MAX = 22;
           this.DUCK_SPEED_MIN = 0.6;
           this.DUCK_SPEED_MAX = 2;
-          this.SPAWN_INTERVAL_MS = 1200;
+          this.SPAWN_INTERVAL_MS = 800;
           this.GAME_DURATION_SEC = 60;
           this.moorhuhnLastTime = 0;
           this.moorhuhnsTargets = [];
@@ -6054,7 +6054,7 @@
             speed = this.DUCK_SPEED_MIN + 0.5 + Math.random() * (this.DUCK_SPEED_MAX - this.DUCK_SPEED_MIN);
             color = "#E91E63";
           }
-          const startX = direction === "left" ? -radius - 10 : this.MOORHUEHN_WIDTH + radius + 10;
+          const startX = direction === "left" ? -radius : this.MOORHUEHN_WIDTH + radius;
           const vx = direction === "left" ? speed : -speed;
           const vy = (Math.random() - 0.5) * 0.6;
           this.moorhuhnsTargets.push({
@@ -6067,7 +6067,6 @@
             kind,
             hitAnim: 0
           });
-          void color;
         }
         shoot(x, y) {
           this.moorhuhnShots++;
@@ -6182,6 +6181,9 @@
         update(deltaSec) {
           if (this.moorhuhnGameOver) return;
           this.moorhuhnTimeRemaining -= deltaSec;
+          if (this.moorhuhnStatusElement && !this.moorhuhnGameOver) {
+            this.moorhuhnStatusElement.textContent = `Punkte: ${this.moorhuhnScore} | Treffer: ${this.moorhuhnHits}/${this.moorhuhnShots} | \u23F1 ${Math.ceil(this.moorhuhnTimeRemaining)}s`;
+          }
           if (this.moorhuhnTimeRemaining <= 0) {
             this.moorhuhnTimeRemaining = 0;
             this.endGame();
