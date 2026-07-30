@@ -29,7 +29,7 @@ export class MoorhuhnGame implements Game {
     private readonly TARGET_RADIUS_MAX: number = 22;
     private readonly DUCK_SPEED_MIN: number = 0.6;
     private readonly DUCK_SPEED_MAX: number = 2.0;
-    private readonly SPAWN_INTERVAL_MS: number = 1200;
+    private readonly SPAWN_INTERVAL_MS: number = 800;
     private readonly GAME_DURATION_SEC: number = 60;
 
     private moorhuhnInterval: ReturnType<typeof setInterval> | undefined;
@@ -107,6 +107,7 @@ export class MoorhuhnGame implements Game {
 
         const startX: number = direction === 'left' ? -radius - 10 : this.MOORHUEHN_WIDTH + radius + 10;
         const vx: number = direction === 'left' ? speed : -speed;
+        void vy;
         const vy: number = (Math.random() - 0.5) * 0.6;
 
         this.moorhuhnsTargets.push({
