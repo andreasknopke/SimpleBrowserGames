@@ -6029,34 +6029,56 @@
           }
         }
         spawnTarget() {
-          const directions = ["left", "right"];
+          const directions = ["left", "right", "top", "bottom"];
           const direction = directions[Math.floor(Math.random() * directions.length)];
-          const sideMargin = 30;
-          const startY = 80 + Math.random() * (this.MOORHUEHN_HEIGHT - 180);
           const kindRoll = Math.random();
           let kind;
-          let radius;
-          let speed;
-          let color;
+          let baseRadius;
           if (kindRoll < 0.5) {
             kind = "duck";
-            radius = 16 + Math.random() * 4;
-            speed = this.DUCK_SPEED_MIN + Math.random() * (this.DUCK_SPEED_MAX - this.DUCK_SPEED_MIN);
-            color = "#4CAF50";
+            baseRadius = 16;
           } else if (kindRoll < 0.85) {
             kind = "rabbit";
-            radius = 18 + Math.random() * 4;
-            speed = this.DUCK_SPEED_MIN + 0.3 + Math.random() * (this.DUCK_SPEED_MAX - this.DUCK_SPEED_MIN);
-            color = "#FF9800";
+            baseRadius = 18;
           } else {
             kind = "pheasant";
-            radius = 20 + Math.random() * 2;
-            speed = this.DUCK_SPEED_MIN + 0.5 + Math.random() * (this.DUCK_SPEED_MAX - this.DUCK_SPEED_MIN);
-            color = "#E91E63";
+            baseRadius = 20;
           }
-          const startX = direction === "left" ? -radius : this.MOORHUEHN_WIDTH + radius;
-          const vx = direction === "left" ? speed : -speed;
-          const vy = (Math.random() - 0.5) * 0.6;
+          const depthRoll = Math.random();
+          const isNear = depthRoll < 0.5;
+          const radius = isNear ? baseRadius + 5 + Math.random() * 6 : baseRadius - 6 + Math.random() * 4;
+          const points = Math.round(200 / radius);
+          const speed = this.DUCK_SPEED_MIN + Math.random() * (this.DUCK_SPEED_MAX - this.DUCK_SPEED_MIN);
+          let startX = 0;
+          let startY = 0;
+          let vx = 0;
+          let vy = 0;
+          switch (direction) {
+            case "left":
+              startX = -radius;
+              startY = 40 + Math.random() * (this.MOORHUEHN_HEIGHT - 120);
+              vx = speed;
+              vy = (Math.random() - 0.5) * 0.6;
+              break;
+            case "right":
+              startX = this.MOORHUEHN_WIDTH + radius;
+              startY = 40 + Math.random() * (this.MOORHUEHN_HEIGHT - 120);
+              vx = -speed;
+              vy = (Math.random() - 0.5) * 0.6;
+              break;
+            case "top":
+              startX = 40 + Math.random() * (this.MOORHUEHN_WIDTH - 120);
+              startY = -radius;
+              vx = (Math.random() - 0.5) * 0.6;
+              vy = speed;
+              break;
+            case "bottom":
+              startX = 40 + Math.random() * (this.MOORHUEHN_WIDTH - 120);
+              startY = this.MOORHUEHN_HEIGHT + radius;
+              vx = (Math.random() - 0.5) * 0.6;
+              vy = -speed;
+              break;
+          }
           this.moorhuhnsTargets.push({
             x: startX,
             y: startY,
@@ -6065,7 +6087,9 @@
             radius,
             alive: true,
             kind,
-            hitAnim: 0
+            direction,
+            hitAnim: 0,
+            points
           });
         }
         shoot(x, y) {
@@ -6082,7 +6106,7 @@
               this.moorhuhnHits++;
               hitSomething = true;
               this.createHitEffect(target.x, target.y, target.kind);
-              const points = this.pointsForKind(target.kind);
+              const points = target.points;
               this.moorhuhnScore += points;
               if (this.moorhuhnStatusElement) {
                 this.moorhuhnStatusElement.textContent = `Punkte: ${this.moorhuhnScore} | Treffer: ${this.moorhuhnHits}/${this.moorhuhnShots} | \u23F1 ${Math.ceil(this.moorhuhnTimeRemaining)}s`;
@@ -6201,12 +6225,22 @@
             }
             target.x += target.vx;
             target.y += target.vy;
-            if (target.y < this.TARGET_RADIUS_MIN || target.y > this.MOORHUEHN_HEIGHT - this.TARGET_RADIUS_MIN) {
-              target.vy *= -1;
-              target.y = target.y < this.TARGET_RADIUS_MIN ? this.TARGET_RADIUS_MIN : this.MOORHUEHN_HEIGHT - this.TARGET_RADIUS_MIN;
-            }
-            if (target.x + target.radius < 0 || target.x - target.radius > this.MOORHUEHN_WIDTH) {
-              target.alive = false;
+            if (target.direction === "top" || target.direction === "bottom") {
+              if (target.x - target.radius < 0 || target.x + target.radius > this.MOORHUEHN_WIDTH) {
+                target.vx *= -1;
+                target.x = target.x < this.MOORHUEHN_WIDTH / 2 ? 0 + target.radius : this.MOORHUEHN_WIDTH - target.radius;
+              }
+              if (target.y + target.radius < 0 || target.y - target.radius > this.MOORHUEHN_HEIGHT) {
+                target.alive = false;
+              }
+            } else {
+              if (target.y < this.TARGET_RADIUS_MIN || target.y > this.MOORHUEHN_HEIGHT - this.TARGET_RADIUS_MIN) {
+                target.vy *= -1;
+                target.y = target.y < this.TARGET_RADIUS_MIN ? this.TARGET_RADIUS_MIN : this.MOORHUEHN_HEIGHT - this.TARGET_RADIUS_MIN;
+              }
+              if (target.x + target.radius < 0 || target.x - target.radius > this.MOORHUEHN_WIDTH) {
+                target.alive = false;
+              }
             }
           }
           this.moorhuhnsTargets = this.moorhuhnsTargets.filter((t) => t.alive || t.hitAnim > 0);
